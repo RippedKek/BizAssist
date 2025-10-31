@@ -9,6 +9,8 @@ import {
   EyeOff,
   User,
   ArrowRight,
+  Sun,
+  Moon,
 } from 'lucide-react'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { setDoc, doc } from 'firebase/firestore'
@@ -85,19 +87,19 @@ const SignUpPage = () => {
   return (
     <div
       className={`min-h-screen flex items-center justify-center py-32 ${
-        isDark ? 'bg-black' : 'bg-gray-50'
+        isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
       }`}
     >
       {/* Theme Toggle Button */}
       <button
         onClick={() => setTheme(isDark ? 'light' : 'dark')}
-        className={`fixed top-6 right-6 px-4 py-2 rounded-lg font-medium ${
+        className={`fixed top-6 right-6 w-10 h-10 rounded-lg flex items-center justify-center ${
           isDark
-            ? 'bg-gray-800 hover:bg-gray-700 text-white'
-            : 'bg-white hover:bg-gray-100 text-gray-900 border border-gray-300'
+            ? 'bg-gray-800 hover:bg-gray-700'
+            : 'bg-white hover:bg-gray-100 border border-gray-300'
         }`}
       >
-        {isDark ? '☀️ Light' : '🌙 Dark'}
+        {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
       </button>
 
       <div className='w-full max-w-md px-6'>

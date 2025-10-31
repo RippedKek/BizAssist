@@ -1,11 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Sparkles, Menu, Lightbulb, Wand2, Palette, Network, CheckCircle, BarChart3, PenTool } from 'lucide-react';
+import { Sparkles, Sun, Moon, Lightbulb, Wand2, Palette, Network, CheckCircle, BarChart3, PenTool, User } from 'lucide-react';
+import InputIdeaModal from '../../components/InputIdeaModal';
 
 const Homepage = () => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const isDark = theme === 'dark';
+
+  const handleGetStarted = () => {
+    setIsModalOpen(true);
+  };
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -22,22 +28,45 @@ const Homepage = () => {
             </div>
             <span className='text-xl font-bold'>BizAssist</span>
           </div>
-          <div className="flex items-center gap-8">
-            <div className="hidden md:flex items-center gap-9">
-              <a href="#" className={`text-sm font-medium ${isDark ? 'text-gray-300 hover:text-blue-400' : 'text-gray-600 hover:text-blue-600'}`}>Features</a>
-              <a href="#" className={`text-sm font-medium ${isDark ? 'text-gray-300 hover:text-blue-400' : 'text-gray-600 hover:text-blue-600'}`}>Pricing</a>
-              <a href="#" className={`text-sm font-medium ${isDark ? 'text-gray-300 hover:text-blue-400' : 'text-gray-600 hover:text-blue-600'}`}>About</a>
-            </div>
-            <a className={`hidden text-sm font-bold ${isDark ? 'text-white' : 'text-blue-600'} sm:block`} href="#">Login</a>
-            <button className="flex h-10 min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-blue-600 px-5 text-sm font-bold text-white transition-opacity hover:opacity-90">
-              <span className="truncate">Get Started</span>
+          <div className="flex items-center gap-6">
+            <a
+              href='#'
+              className={`${
+                isDark
+                  ? 'text-gray-300 hover:text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              My Pitches
+            </a>
+            <button
+              className={`px-4 py-2 rounded-lg font-medium ${
+                isDark
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              }`}
+            >
+              Log Out
+            </button>
+            <button
+              className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                isDark
+                  ? 'bg-gray-800 hover:bg-gray-700'
+                  : 'bg-white hover:bg-gray-100 border border-gray-300'
+              }`}
+            >
+              <User className="w-5 h-5" />
             </button>
             <button
               onClick={() => setTheme(isDark ? 'light' : 'dark')}
-              className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100 border border-gray-300'}`}
+              className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                isDark
+                  ? 'bg-gray-800 hover:bg-gray-700'
+                  : 'bg-white hover:bg-gray-100 border border-gray-300'
+              }`}
               aria-label="Toggle theme"
             >
-              <Menu className='w-5 h-5' />
+              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
           </div>
         </div>
@@ -57,8 +86,11 @@ const Homepage = () => {
                     BizAssist uses AI to structure, validate, and design your business ideas, making you ready to impress.
                   </p>
                 </div>
-                <button className="flex h-12 w-full max-w-xs cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-blue-600 px-6 text-base font-bold text-white transition-opacity hover:opacity-90 lg:w-auto">
-                  <span className="truncate">Create Your Pitch Now</span>
+                <button
+                  onClick={handleGetStarted}
+                  className="flex h-12 w-full max-w-xs cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-blue-600 px-6 text-base font-bold text-white transition-opacity hover:opacity-90 lg:w-auto"
+                >
+                  <span className="truncate">Get Started for Free</span>
                 </button>
               </div>
               <div className="flex items-center justify-center">
@@ -154,7 +186,7 @@ const Homepage = () => {
                   <img className="h-12 w-12 rounded-full object-cover" alt="Profile photo of Rahman Khan" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqX3GEondybsOTXdt1JWyDkgoXdy2OLYfwe2RgHRGRpOrGIjLuJZPyuMKnGUb__0KTj_pPSY-Xh7yIl2EDcZn86Cr_HHVgikiK8YxFhQNa9om4H6W7hcRVIVk_fR4iKuhj6-YJ7Cm72nWfkviZ4X-FUT9Y3i32wSBmmhwfFPh9fMtcBUMq2zJEfJtWiLzvrW9nlakTsXwqCVBqw_4XWRxw-i1PmTQBje5oJdta1GLMjbzneZoytu8Mwp3v2OGSRsgYWlQtyDx9EkME"/>
                   <div>
                     <p className="font-bold">Rahman Khan</p>
-                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Founder, Chaya Tech</p>
+                    <p className="text-sm text-gray-600">Founder, Chaya Tech</p>
                   </div>
                 </div>
               </div>
@@ -164,7 +196,7 @@ const Homepage = () => {
                   <img className="h-12 w-12 rounded-full object-cover" alt="Profile photo of Fatima Ahmed" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSSdX_6wXUJ56U_Rt5wd4SC6qadHqDAgILZqzFjSny9MQQG8v_LSRcHxYHBvXYIgYQNJ4lGrOsrWv9VHQSMMismMhydN3hRRue6lx3sKWocj3GvwLKjvqe_lBA7whUtIdZF0KAPBVby0gUxZ6SPqtls8Zv50GCi-B0F-_WGv4z_nHZcMvN0nPJS0ucAW7YUYMlei-AZrYfxNqwS9f8zCegQMWwCxU_4pOJRr3uFtZE4YxcK9ZyP7b7PPLWfveh_upU2itnHvpfOnfb"/>
                   <div>
                     <p className="font-bold">Fatima Ahmed</p>
-                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>CEO, Shujog</p>
+                    <p className="text-sm text-gray-600">CEO, Shujog</p>
                   </div>
                 </div>
               </div>
@@ -174,7 +206,7 @@ const Homepage = () => {
                   <img className="h-12 w-12 rounded-full object-cover" alt="Profile photo of Anisul Islam" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDLwWGKtsDE7X-6M0Nu5zhKJrDPGUqVkQtpRPBrDZgi8iobXR5KMU3NcuQt46eqGQA_OarHT8eAFzXqIuivzNpofBVK3isBn9uBk-2VdEjCAj4NX2xMA-pFqxWMF2XvwzGrPjB2d4eGps9MFi1Dx382BeWWrUcEYXuZrKImOmlL2LmrchO9oLktCr00_lva0Av2MNE7DO-9SPgBEN69OQuyoDwJzlhx112Lszsr432X8mXe7kKEGFvt7hA2iYCJndy95Hdw6KwWOch0"/>
                   <div>
                     <p className="font-bold">Anisul Islam</p>
-                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Co-Founder, Pathao Eats</p>
+                    <p className="text-sm text-gray-600">Co-Founder, Pathao Eats</p>
                   </div>
                 </div>
               </div>
@@ -189,7 +221,10 @@ const Homepage = () => {
               <div className="flex flex-col items-center gap-6">
                 <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Ready to bring your business idea to life?</h2>
                 <p className="max-w-xl text-base text-gray-200 md:text-lg">Stop waiting and start building. Create a compelling, investor-ready business pitch today and take the first step towards your entrepreneurial dream.</p>
-                <button className="flex h-12 min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-emerald-500 px-6 text-base font-bold text-blue-600 transition-opacity hover:opacity-90">
+                <button
+                  onClick={handleGetStarted}
+                  className="flex h-12 min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-emerald-500 px-6 text-base font-bold text-blue-600 transition-opacity hover:opacity-90"
+                >
                   <span className="truncate">Get Started for Free</span>
                 </button>
               </div>
@@ -199,49 +234,43 @@ const Homepage = () => {
       </main>
 
       {/* Footer */}
-      <footer className={`border-t py-12 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+      <footer className={`py-10 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-            <div className="flex flex-col gap-4 md:col-span-1">
-              <a className="flex items-center gap-3" href="#">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-blue-600' : 'bg-emerald-600'}`}>
-                  <Sparkles className='w-5 h-5 text-white' />
-                </div>
-                <span className='text-xl font-bold'>BizAssist</span>
-              </a>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Empowering the next generation of Bangladeshi entrepreneurs.</p>
+          {/* Brand + Tagline */}
+          <div className="flex flex-col items-center text-center gap-3">
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                  isDark ? 'bg-blue-600' : 'bg-emerald-600'
+                }`}
+              >
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-bold">BizAssist</span>
             </div>
-            <div className="grid grid-cols-2 gap-8 md:col-span-3 md:grid-cols-3">
-              <div>
-                <h4 className="font-bold">Product</h4>
-                <ul className="mt-4 space-y-3">
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">Features</a></li>
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">Pricing</a></li>
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">Updates</a></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-bold">Company</h4>
-                <ul className="mt-4 space-y-3">
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">About Us</a></li>
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">Careers</a></li>
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">Contact</a></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-bold">Legal</h4>
-                <ul className="mt-4 space-y-3">
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">Terms of Service</a></li>
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">Privacy Policy</a></li>
-                </ul>
-              </div>
-            </div>
+
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Empowering the next generation of Bangladeshi entrepreneurs.
+            </p>
           </div>
-          <div className={`mt-12 border-t pt-8 text-center text-sm ${isDark ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-600'}`}>
-            <p>© 2024 BizAssist. All rights reserved.</p>
+
+          {/* Divider and Credit */}
+          <div
+            className={`mt-8 border-t pt-4 text-center text-sm ${
+              isDark ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-600'
+            }`}
+          >
+            <p>© {new Date().getFullYear()} BizAssist by Team Ultron</p>
           </div>
         </div>
       </footer>
+
+      {/* Input Idea Modal */}
+      <InputIdeaModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        theme={theme}
+      />
     </div>
   );
 };

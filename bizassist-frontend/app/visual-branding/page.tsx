@@ -1,13 +1,23 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Sparkles, Moon, Sun } from 'lucide-react';
 
 const VisualBrandingScreen = () => {
   const [selectedLogo, setSelectedLogo] = useState(0);
   const [selectedPalette, setSelectedPalette] = useState(0);
   const [theme, setTheme] = useState('dark');
+  const searchParams = useSearchParams();
   const isDark = theme === 'dark';
+
+  useEffect(() => {
+    const ideaParam = searchParams.get('idea');
+    if (ideaParam) {
+      // You can use the idea here if needed for branding generation
+      console.log('Idea from params:', decodeURIComponent(ideaParam));
+    }
+  }, [searchParams]);
 
   const logos = [
     { color: '#5B5FEF', label: 'Indigo' },
@@ -114,11 +124,21 @@ const VisualBrandingScreen = () => {
               <Sparkles className="w-4 h-4" />
               Generate More
             </button>
-            <button className={`px-6 py-2.5 rounded-lg transition-colors font-semibold ${
-              isDark
-                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700'
-            }`}>
+            <button
+              onClick={() => {
+                const params = new URLSearchParams();
+                const ideaParam = searchParams.get('idea');
+                if (ideaParam) {
+                  params.set('idea', ideaParam);
+                }
+                window.location.href = `/pitch-improvement?${params.toString()}`;
+              }}
+              className={`px-6 py-2.5 rounded-lg transition-colors font-semibold ${
+                isDark
+                  ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+              }`}
+            >
               Save & Continue
             </button>
           </div>

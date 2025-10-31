@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   Sparkles,
   Copy,
@@ -9,7 +10,8 @@ import {
   ThumbsDown,
   RefreshCw,
   ChevronDown,
-  Menu,
+  Sun,
+  Moon,
 } from 'lucide-react'
 
 const PitchGeneratorPage = () => {
@@ -21,10 +23,18 @@ const PitchGeneratorPage = () => {
     market: true,
     ask: true,
   })
+  const searchParams = useSearchParams();
 
   const isDark = theme === 'dark'
 
-  const toggleSection = (section: string) => {
+  useEffect(() => {
+    const summaryParam = searchParams.get('summary');
+    if (summaryParam) {
+      setIdeaText(decodeURIComponent(summaryParam));
+    }
+  }, [searchParams]);
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
@@ -44,7 +54,7 @@ const PitchGeneratorPage = () => {
   return (
     <div
       className={`min-h-screen ${
-        isDark ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'
+        isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
       }`}
     >
       {/* Navbar */}
@@ -101,7 +111,7 @@ const PitchGeneratorPage = () => {
                   : 'bg-white hover:bg-gray-100 border border-gray-300'
               }`}
             >
-              <Menu className='w-5 h-5' />
+              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
           </div>
         </div>
@@ -159,6 +169,23 @@ const PitchGeneratorPage = () => {
               <Sparkles className='w-5 h-5' />
               Generate Pitch
             </button>
+
+            <button
+              onClick={() => {
+                const params = new URLSearchParams();
+                if (ideaText) {
+                  params.set('idea', encodeURIComponent(ideaText));
+                }
+                window.location.href = `/visual-branding?${params.toString()}`;
+              }}
+              className={`w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 mt-4 ${
+                isDark
+                  ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+              } transition-colors`}
+            >
+              Create Visual Branding
+            </button>
           </div>
 
           {/* Right Column - Output */}
@@ -179,6 +206,7 @@ const PitchGeneratorPage = () => {
                     className={`p-2 rounded-lg ${
                       isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
                     }`}
+                    aria-label="Copy pitch"
                   >
                     <Copy className='w-5 h-5' />
                   </button>
@@ -186,6 +214,7 @@ const PitchGeneratorPage = () => {
                     className={`p-2 rounded-lg ${
                       isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
                     }`}
+                    aria-label="Download pitch"
                   >
                     <Download className='w-5 h-5' />
                   </button>
@@ -337,6 +366,7 @@ const PitchGeneratorPage = () => {
                     className={`p-2 rounded-lg ${
                       isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
                     }`}
+                    aria-label="Like this pitch"
                   >
                     <ThumbsUp className='w-5 h-5' />
                   </button>
@@ -344,6 +374,7 @@ const PitchGeneratorPage = () => {
                     className={`p-2 rounded-lg ${
                       isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
                     }`}
+                    aria-label="Dislike this pitch"
                   >
                     <ThumbsDown className='w-5 h-5' />
                   </button>
@@ -353,6 +384,7 @@ const PitchGeneratorPage = () => {
                         ? 'bg-gray-800 hover:bg-gray-700'
                         : 'bg-gray-100 hover:bg-gray-200'
                     }`}
+                    aria-label="Regenerate pitch"
                   >
                     <RefreshCw className='w-4 h-4' />
                     Regenerate
