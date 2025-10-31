@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Lightbulb, Sparkles, Download, Share, Menu } from 'lucide-react';
+import { Bell, Lightbulb, Sparkles, Download, Share, Menu, Sun, Moon } from 'lucide-react';
 
 
 const IdeaRankerPage = () => {
@@ -105,9 +105,9 @@ const IdeaRankerPage = () => {
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Header */}
-      <header className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-        <div className="max-w-7xl mx-auto px-6 lg:px-24 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+      <nav className={`border-b ${isDark ? 'border-gray-800' : 'border-gray-200'} sticky top-0 z-10 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+        <div className='max-w-7xl mx-auto px-6 py-4 flex items-center justify-between'>
+          <div className='flex items-center gap-2'>
             <div
               className={`w-8 h-8 rounded-lg ${
                 isDark ? 'bg-blue-600' : 'bg-emerald-600'
@@ -117,28 +117,50 @@ const IdeaRankerPage = () => {
             </div>
             <span className='text-xl font-bold'>BizAssist</span>
           </div>
-          <div className="flex items-center gap-8">
-            <div className="hidden md:flex items-center gap-9">
-              <a href="#" className={`text-sm font-medium ${isDark ? 'text-gray-300 hover:text-blue-400' : 'text-gray-600 hover:text-blue-600'}`}>Dashboard</a>
-              <a href="#" className={`text-sm font-medium ${isDark ? 'text-gray-300 hover:text-blue-400' : 'text-gray-600 hover:text-blue-600'}`}>My Ideas</a>
-              <a href="#" className="text-sm font-bold border-b-2 border-blue-600 pb-1">IdeaRanker</a>
-            </div>
-            <button
-              className={`p-2.5 rounded-lg ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-              aria-label="Notifications"
+
+          <div className='flex items-center gap-6'>
+            <a
+              href='#'
+              className={`${
+                isDark
+                  ? 'text-gray-300 hover:text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
             >
-              <Bell className="w-5 h-5" />
+              Home
+            </a>
+            <a
+              href='#'
+              className={`${
+                isDark
+                  ? 'text-gray-300 hover:text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              My Pitches
+            </a>
+            <button
+              className={`px-4 py-2 rounded-lg font-medium ${
+                isDark
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              }`}
+            >
+              Log Out
             </button>
             <button
               onClick={() => setTheme(isDark ? 'light' : 'dark')}
-              className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100 border border-gray-300'}`}
-              aria-label="Toggle theme"
+              className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                isDark
+                  ? 'bg-gray-800 hover:bg-gray-700'
+                  : 'bg-white hover:bg-gray-100 border border-gray-300'
+              }`}
             >
-              <Menu className='w-5 h-5' />
+              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
           </div>
         </div>
-      </header>
+      </nav>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 lg:px-24 py-8">
