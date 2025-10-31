@@ -40,7 +40,7 @@ const LoginPage = () => {
         })
       )
 
-      router.push('/pitch-generator')
+      router.push('/homepage')
     } catch (error: any) {
       setError(error.message || 'Failed to sign in')
     } finally {
