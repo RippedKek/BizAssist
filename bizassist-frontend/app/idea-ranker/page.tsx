@@ -1,23 +1,29 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Bell, Lightbulb, Sparkles, Download, Share, Menu, Sun, Moon } from 'lucide-react';
 
 
 const IdeaRankerPage = () => {
   const [theme, setTheme] = useState('dark');
   const [summary, setSummary] = useState<string>('');
-  const searchParams = useSearchParams();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const router = useRouter();
   const isDark = theme === 'dark';
 
   useEffect(() => {
-    const summaryParam = searchParams.get('summary');
-    if (summaryParam) {
-      setSummary(decodeURIComponent(summaryParam));
+    if (typeof window === 'undefined') return;
+
+    try {
+      const storedSummary = sessionStorage.getItem('bizassist-shared-summary');
+      if (storedSummary) {
+        setSummary(storedSummary);
+      }
+    } catch (error) {
+      console.error('Error retrieving summary:', error);
     }
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -273,11 +279,15 @@ const IdeaRankerPage = () => {
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
           <button
             onClick={() => {
-              const params = new URLSearchParams();
-              if (summary) {
-                params.set('summary', encodeURIComponent(summary));
+              if (typeof window !== 'undefined' && summary) {
+                try {
+                  sessionStorage.setItem('bizassist-shared-summary', summary);
+                } catch (error) {
+                  console.error('Error storing summary for pitch generator:', error);
+                }
               }
-              window.location.href = `/pitch-generator?${params.toString()}`;
+
+              router.push('/pitch-generator');
             }}
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors"
           >
