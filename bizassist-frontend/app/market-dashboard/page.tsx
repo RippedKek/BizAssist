@@ -1,11 +1,30 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Bell, CheckCircle, ChevronDown, FileDown, Menu, Sparkles, Sun, Moon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Bell, CheckCircle, ChevronDown, FileDown, Menu, Sparkles, Sun, Moon, ArrowRight } from 'lucide-react';
 
 const MarketDashboardPage = () => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [summary, setSummary] = useState<string>('');
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const isDark = theme === 'dark';
+
+  useEffect(() => {
+    const summaryParam = searchParams.get('summary');
+    if (summaryParam) {
+      setSummary(decodeURIComponent(summaryParam));
+    }
+  }, [searchParams]);
+
+  const handleNext = () => {
+    const params = new URLSearchParams();
+    if (summary) {
+      params.set('summary', encodeURIComponent(summary));
+    }
+    router.push(`/idea-ranker?${params.toString()}`);
+  };
 
   const markets = [
     { name: 'USA', percentage: 90 },
@@ -82,7 +101,7 @@ const MarketDashboardPage = () => {
           <div>
             <h1 className="text-4xl font-black mb-3">Global Market Feasibility Dashboard</h1>
             <p className={`text-base ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Your Idea: AI-powered business pitch generator
+              Your Idea: {summary || 'AI-powered business pitch generator'}
             </p>
           </div>
           <button className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors">
@@ -331,6 +350,17 @@ const MarketDashboardPage = () => {
               </ul>
             </div>
           </div>
+        </div>
+
+        {/* Rank Ideas Button */}
+        <div className="flex justify-end">
+          <button
+            onClick={handleNext}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors"
+          >
+            Rank Ideas
+            <ArrowRight className="w-5 h-5" />
+          </button>
         </div>
       </main>
     </div>

@@ -2,10 +2,16 @@
 
 import React, { useState } from 'react';
 import { Sparkles, Sun, Moon, Lightbulb, Wand2, Palette, Network, CheckCircle, BarChart3, PenTool, User } from 'lucide-react';
+import InputIdeaModal from '../../components/InputIdeaModal';
 
 const Homepage = () => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const isDark = theme === 'dark';
+
+  const handleGetStarted = () => {
+    setIsModalOpen(true);
+  };
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -80,7 +86,10 @@ const Homepage = () => {
                     BizAssist uses AI to structure, validate, and design your business ideas, making you ready to impress.
                   </p>
                 </div>
-                <button className="flex h-12 w-full max-w-xs cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-blue-600 px-6 text-base font-bold text-white transition-opacity hover:opacity-90 lg:w-auto">
+                <button
+                  onClick={handleGetStarted}
+                  className="flex h-12 w-full max-w-xs cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-blue-600 px-6 text-base font-bold text-white transition-opacity hover:opacity-90 lg:w-auto"
+                >
                   <span className="truncate">Get Started for Free</span>
                 </button>
               </div>
@@ -177,7 +186,7 @@ const Homepage = () => {
                   <img className="h-12 w-12 rounded-full object-cover" alt="Profile photo of Rahman Khan" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqX3GEondybsOTXdt1JWyDkgoXdy2OLYfwe2RgHRGRpOrGIjLuJZPyuMKnGUb__0KTj_pPSY-Xh7yIl2EDcZn86Cr_HHVgikiK8YxFhQNa9om4H6W7hcRVIVk_fR4iKuhj6-YJ7Cm72nWfkviZ4X-FUT9Y3i32wSBmmhwfFPh9fMtcBUMq2zJEfJtWiLzvrW9nlakTsXwqCVBqw_4XWRxw-i1PmTQBje5oJdta1GLMjbzneZoytu8Mwp3v2OGSRsgYWlQtyDx9EkME"/>
                   <div>
                     <p className="font-bold">Rahman Khan</p>
-                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Founder, Chaya Tech</p>
+                    <p className="text-sm text-gray-600">Founder, Chaya Tech</p>
                   </div>
                 </div>
               </div>
@@ -187,7 +196,7 @@ const Homepage = () => {
                   <img className="h-12 w-12 rounded-full object-cover" alt="Profile photo of Fatima Ahmed" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSSdX_6wXUJ56U_Rt5wd4SC6qadHqDAgILZqzFjSny9MQQG8v_LSRcHxYHBvXYIgYQNJ4lGrOsrWv9VHQSMMismMhydN3hRRue6lx3sKWocj3GvwLKjvqe_lBA7whUtIdZF0KAPBVby0gUxZ6SPqtls8Zv50GCi-B0F-_WGv4z_nHZcMvN0nPJS0ucAW7YUYMlei-AZrYfxNqwS9f8zCegQMWwCxU_4pOJRr3uFtZE4YxcK9ZyP7b7PPLWfveh_upU2itnHvpfOnfb"/>
                   <div>
                     <p className="font-bold">Fatima Ahmed</p>
-                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>CEO, Shujog</p>
+                    <p className="text-sm text-gray-600">CEO, Shujog</p>
                   </div>
                 </div>
               </div>
@@ -197,7 +206,7 @@ const Homepage = () => {
                   <img className="h-12 w-12 rounded-full object-cover" alt="Profile photo of Anisul Islam" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDLwWGKtsDE7X-6M0Nu5zhKJrDPGUqVkQtpRPBrDZgi8iobXR5KMU3NcuQt46eqGQA_OarHT8eAFzXqIuivzNpofBVK3isBn9uBk-2VdEjCAj4NX2xMA-pFqxWMF2XvwzGrPjB2d4eGps9MFi1Dx382BeWWrUcEYXuZrKImOmlL2LmrchO9oLktCr00_lva0Av2MNE7DO-9SPgBEN69OQuyoDwJzlhx112Lszsr432X8mXe7kKEGFvt7hA2iYCJndy95Hdw6KwWOch0"/>
                   <div>
                     <p className="font-bold">Anisul Islam</p>
-                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Co-Founder, Pathao Eats</p>
+                    <p className="text-sm text-gray-600">Co-Founder, Pathao Eats</p>
                   </div>
                 </div>
               </div>
@@ -212,7 +221,10 @@ const Homepage = () => {
               <div className="flex flex-col items-center gap-6">
                 <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Ready to bring your business idea to life?</h2>
                 <p className="max-w-xl text-base text-gray-200 md:text-lg">Stop waiting and start building. Create a compelling, investor-ready business pitch today and take the first step towards your entrepreneurial dream.</p>
-                <button className="flex h-12 min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-emerald-500 px-6 text-base font-bold text-blue-600 transition-opacity hover:opacity-90">
+                <button
+                  onClick={handleGetStarted}
+                  className="flex h-12 min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-emerald-500 px-6 text-base font-bold text-blue-600 transition-opacity hover:opacity-90"
+                >
                   <span className="truncate">Get Started for Free</span>
                 </button>
               </div>
@@ -252,6 +264,13 @@ const Homepage = () => {
           </div>
         </div>
       </footer>
+
+      {/* Input Idea Modal */}
+      <InputIdeaModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        theme={theme}
+      />
     </div>
   );
 };

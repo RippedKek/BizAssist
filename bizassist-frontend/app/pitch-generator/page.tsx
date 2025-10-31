@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   Sparkles,
   Copy,
@@ -22,8 +23,16 @@ const PitchGeneratorPage = () => {
     market: true,
     ask: true,
   })
+  const searchParams = useSearchParams();
 
   const isDark = theme === 'dark'
+
+  useEffect(() => {
+    const summaryParam = searchParams.get('summary');
+    if (summaryParam) {
+      setIdeaText(decodeURIComponent(summaryParam));
+    }
+  }, [searchParams]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -159,6 +168,23 @@ const PitchGeneratorPage = () => {
             >
               <Sparkles className='w-5 h-5' />
               Generate Pitch
+            </button>
+
+            <button
+              onClick={() => {
+                const params = new URLSearchParams();
+                if (ideaText) {
+                  params.set('idea', encodeURIComponent(ideaText));
+                }
+                window.location.href = `/visual-branding?${params.toString()}`;
+              }}
+              className={`w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 mt-4 ${
+                isDark
+                  ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+              } transition-colors`}
+            >
+              Create Visual Branding
             </button>
           </div>
 

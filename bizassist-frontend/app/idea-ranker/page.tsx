@@ -1,13 +1,23 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Bell, Lightbulb, Sparkles, Download, Share, Menu, Sun, Moon } from 'lucide-react';
 
 
 const IdeaRankerPage = () => {
   const [theme, setTheme] = useState('dark');
+  const [summary, setSummary] = useState<string>('');
+  const searchParams = useSearchParams();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDark = theme === 'dark';
+
+  useEffect(() => {
+    const summaryParam = searchParams.get('summary');
+    if (summaryParam) {
+      setSummary(decodeURIComponent(summaryParam));
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -166,7 +176,7 @@ const IdeaRankerPage = () => {
       <main className="max-w-7xl mx-auto px-6 lg:px-24 py-8">
         {/* Title Section */}
         <div className="mb-8">
-          <h1 className="text-4xl font-black mb-2">IdeaRanker Score for Agri-Tech Drone Solution</h1>
+          <h1 className="text-4xl font-black mb-2">IdeaRanker Score for {summary || 'Agri-Tech Drone Solution'}</h1>
           <p className={`text-base ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
             Here's the breakdown of your idea's potential based on our analysis.
           </p>
@@ -261,7 +271,16 @@ const IdeaRankerPage = () => {
 
         {/* Action Buttons */}
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors">
+          <button
+            onClick={() => {
+              const params = new URLSearchParams();
+              if (summary) {
+                params.set('summary', encodeURIComponent(summary));
+              }
+              window.location.href = `/pitch-generator?${params.toString()}`;
+            }}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors"
+          >
             <Sparkles className="w-5 h-5" />
             Generate Full Pitch
           </button>
