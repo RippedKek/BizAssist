@@ -26,6 +26,32 @@ class IdeaController {
       })
     }
   }
+
+  async generateMarketInsights(req, res) {
+    try {
+      const { summary } = req.body
+
+      if (!summary) {
+        return res.status(400).json({
+          success: false,
+          error: 'No summary provided',
+        })
+      }
+
+      const insights = await geminiService.generateMarketInsights(summary)
+
+      res.json({
+        success: true,
+        insights,
+      })
+    } catch (error) {
+      console.error('Error generating market insights:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate market insights',
+      })
+    }
+  }
 }
 
 module.exports = new IdeaController()

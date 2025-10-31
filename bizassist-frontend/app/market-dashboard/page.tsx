@@ -14,9 +14,60 @@ import {
   ArrowRight,
 } from 'lucide-react'
 
+type MarketStat = {
+  label: string
+  value: string
+  detail: string
+}
+
+type MarketRecord = {
+  name: string
+  percentage: number
+  rationale: string
+}
+
+type GlobalHighlight = {
+  region: string
+  signal: string
+  detail: string
+  percentage: number
+}
+
+type Challenge = {
+  label: string
+  percentage: number
+  detail: string
+}
+
+type Recommendation = {
+  text: string
+}
+
+type MarketInsights = {
+  headline: string
+  feasibilityScore: {
+    value: number
+    label: string
+    justification: string
+  }
+  stats: MarketStat[]
+  topMarkets: MarketRecord[]
+  globalHighlights: GlobalHighlight[]
+  challenges: Challenge[]
+  recommendations: Recommendation[]
+}
+
+const clampPercentage = (value: number) => {
+  if (Number.isNaN(value)) return 0
+  return Math.min(100, Math.max(0, value))
+}
+
 const MarketDashboardPage = () => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [summary, setSummary] = useState<string>('')
+  const [insights, setInsights] = useState<MarketInsights | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const isDark = theme === 'dark'
 
@@ -33,6 +84,96 @@ const MarketDashboardPage = () => {
     }
   }, [])
 
+  useEffect(() => {
+    if (!summary) return
+
+    let isMounted = true
+
+    const fetchInsights = async () => {
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const apiUrl = `${
+          process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+        }/api/v1/market-insights`
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ summary }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to load market insights')
+        }
+
+        const data = await response.json()
+
+        if (!data?.success || !data?.insights) {
+          throw new Error('Market insights response malformed')
+        }
+
+        if (isMounted) {
+          setInsights(data.insights)
+        }
+      } catch (fetchError) {
+        console.error('Error fetching market insights:', fetchError)
+        if (isMounted) {
+          setError(
+            fetchError instanceof Error
+              ? fetchError.message
+              : 'Unable to load market insights'
+          )
+          setInsights(null)
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    fetchInsights()
+
+    return () => {
+      isMounted = false
+    }
+  }, [summary])
+
+  const scoreValue = clampPercentage(insights?.feasibilityScore?.value ?? 0)
+  const scoreLabel = insights?.feasibilityScore?.label ?? 'Awaiting analysis'
+  const scoreJustification =
+    insights?.feasibilityScore?.justification ??
+    'Provide your idea summary to generate a feasibility score.'
+
+  const statsToDisplay =
+    insights?.stats && insights.stats.length > 0
+      ? insights.stats
+      : [
+          {
+            label: 'Total Addressable Market',
+            value: '—',
+            detail: 'Run the analysis to estimate market size.',
+          },
+          {
+            label: 'Projected Growth (YoY)',
+            value: '—',
+            detail: 'Growth projections will appear here.',
+          },
+          {
+            label: 'Top Competitors',
+            value: '—',
+            detail: 'Competitive landscape will be summarized here.',
+          },
+        ]
+  const topMarkets = insights?.topMarkets ?? []
+  const highlights = insights?.globalHighlights ?? []
+  const challenges = insights?.challenges ?? []
+  const recommendations = insights?.recommendations ?? []
+
   const handleNext = () => {
     if (typeof window !== 'undefined' && summary) {
       try {
@@ -44,15 +185,6 @@ const MarketDashboardPage = () => {
 
     router.push('/idea-ranker')
   }
-
-  const markets = [
-    { name: 'USA', percentage: 90 },
-    { name: 'Germany', percentage: 75 },
-    { name: 'Singapore', percentage: 60 },
-    { name: 'Japan', percentage: 55 },
-    { name: 'Australia', percentage: 40 },
-  ]
-
   return (
     <div
       className={`min-h-screen ${
@@ -138,7 +270,20 @@ const MarketDashboardPage = () => {
                 isDark ? 'text-gray-400' : 'text-gray-500'
               }`}
             >
-              Your Idea: {summary || 'AI-powered business pitch generator'}
+              Your Idea:{' '}
+              {summary ||
+                'Add your idea in the previous step to unlock insights'}
+            </p>
+            <p
+              className={`mt-2 text-sm ${
+                isDark ? 'text-gray-500' : 'text-gray-600'
+              }`}
+            >
+              {insights?.headline
+                ? insights.headline
+                : isLoading
+                ? 'We are preparing a market brief for you...'
+                : 'Generate a summary to receive a tailored market brief.'}
             </p>
           </div>
           <button className='flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors'>
@@ -146,6 +291,33 @@ const MarketDashboardPage = () => {
             Export Report
           </button>
         </div>
+
+        {error && (
+          <div
+            className={`border rounded-lg px-4 py-3 text-sm ${
+              isDark
+                ? 'border-red-500/40 bg-red-500/10 text-red-300'
+                : 'border-red-200 bg-red-50 text-red-700'
+            }`}
+          >
+            {error}
+          </div>
+        )}
+
+        {isLoading && (
+          <div
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${
+              isDark
+                ? 'border-blue-500/40 bg-blue-500/10 text-blue-200'
+                : 'border-blue-200 bg-blue-50 text-blue-700'
+            }`}
+          >
+            <Sparkles className='w-4 h-4 animate-spin' />
+            <span className='text-sm font-medium'>
+              Generating fresh market insights…
+            </span>
+          </div>
+        )}
 
         {/* Filter Chips */}
         <div className='flex gap-3 overflow-x-auto pb-2'>
@@ -195,7 +367,9 @@ const MarketDashboardPage = () => {
             >
               <div className='flex justify-between items-center mb-3'>
                 <p className='text-base font-medium'>Feasibility Score</p>
-                <p className='text-blue-500 text-2xl font-bold'>78/100</p>
+                <p className='text-blue-500 text-2xl font-bold'>
+                  {scoreValue}/100
+                </p>
               </div>
               <div
                 className={`rounded-full h-2 ${
@@ -203,70 +377,54 @@ const MarketDashboardPage = () => {
                 }`}
               >
                 <div
-                  className='h-2 rounded-full bg-blue-600'
-                  style={{ width: '78%' }}
+                  className='h-2 rounded-full bg-blue-600 transition-all'
+                  style={{ width: `${scoreValue}%` }}
                 ></div>
               </div>
               <p
-                className={`text-sm mt-2 ${
+                className={`text-sm mt-3 font-semibold ${
+                  isDark ? 'text-gray-300' : 'text-gray-700'
+                }`}
+              >
+                {scoreLabel}
+              </p>
+              <p
+                className={`text-sm mt-1 ${
                   isDark ? 'text-gray-400' : 'text-gray-500'
                 }`}
               >
-                High Potential
+                {scoreJustification}
               </p>
             </div>
 
             {/* Stats Grid */}
             <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
-              <div
-                className={`p-6 rounded-lg border ${
-                  isDark
-                    ? 'bg-gray-800 border-gray-700'
-                    : 'bg-white border-gray-200'
-                }`}
-              >
-                <p
-                  className={`text-base font-medium mb-2 ${
-                    isDark ? 'text-white' : 'text-gray-900'
+              {statsToDisplay.map((stat) => (
+                <div
+                  key={stat.label}
+                  className={`p-6 rounded-lg border ${
+                    isDark
+                      ? 'bg-gray-800 border-gray-700'
+                      : 'bg-white border-gray-200'
                   }`}
                 >
-                  Total Addressable Market
-                </p>
-                <p className='text-2xl font-bold'>$1.2B</p>
-              </div>
-              <div
-                className={`p-6 rounded-lg border ${
-                  isDark
-                    ? 'bg-gray-800 border-gray-700'
-                    : 'bg-white border-gray-200'
-                }`}
-              >
-                <p
-                  className={`text-base font-medium mb-2 ${
-                    isDark ? 'text-white' : 'text-gray-900'
-                  }`}
-                >
-                  Projected Growth (YoY)
-                </p>
-                <p className='text-2xl font-bold'>15%</p>
-                <p className='text-blue-500 text-sm font-medium'>+2.1%</p>
-              </div>
-              <div
-                className={`p-6 rounded-lg border ${
-                  isDark
-                    ? 'bg-gray-800 border-gray-700'
-                    : 'bg-white border-gray-200'
-                }`}
-              >
-                <p
-                  className={`text-base font-medium mb-2 ${
-                    isDark ? 'text-white' : 'text-gray-900'
-                  }`}
-                >
-                  Top Competitors
-                </p>
-                <p className='text-2xl font-bold'>3</p>
-              </div>
+                  <p
+                    className={`text-base font-medium mb-2 ${
+                      isDark ? 'text-white' : 'text-gray-900'
+                    }`}
+                  >
+                    {stat.label}
+                  </p>
+                  <p className='text-2xl font-bold'>{stat.value}</p>
+                  <p
+                    className={`text-sm mt-2 ${
+                      isDark ? 'text-gray-400' : 'text-gray-600'
+                    }`}
+                  >
+                    {stat.detail}
+                  </p>
+                </div>
+              ))}
             </div>
 
             {/* Top 5 Markets */}
@@ -280,36 +438,61 @@ const MarketDashboardPage = () => {
               <h3 className='text-lg font-bold mb-4'>
                 Top 5 Potential Export Markets
               </h3>
-              <div className='space-y-4'>
-                {markets.map((market) => (
-                  <div key={market.name} className='flex items-center gap-4'>
-                    <p
-                      className={`w-24 text-sm ${
-                        isDark ? 'text-gray-400' : 'text-gray-600'
-                      }`}
-                    >
-                      {market.name}
-                    </p>
-                    <div
-                      className={`flex-1 h-4 rounded-full ${
-                        isDark ? 'bg-gray-700' : 'bg-gray-200'
-                      }`}
-                    >
+              {topMarkets.length > 0 ? (
+                <div className='space-y-4'>
+                  {topMarkets.slice(0, 5).map((market) => {
+                    const share = clampPercentage(market.percentage)
+                    return (
                       <div
-                        className='bg-blue-600 h-4 rounded-full transition-all'
-                        style={{ width: `${market.percentage}%` }}
-                      ></div>
-                    </div>
-                    <span
-                      className={`text-sm font-medium ${
-                        isDark ? 'text-gray-400' : 'text-gray-600'
-                      }`}
-                    >
-                      {market.percentage}%
-                    </span>
-                  </div>
-                ))}
-              </div>
+                        key={`${market.name}-${share}`}
+                        className='space-y-2'
+                      >
+                        <div className='flex items-center gap-4'>
+                          <p
+                            className={`w-32 text-sm font-medium ${
+                              isDark ? 'text-gray-300' : 'text-gray-700'
+                            }`}
+                          >
+                            {market.name}
+                          </p>
+                          <div
+                            className={`flex-1 h-3 rounded-full ${
+                              isDark ? 'bg-gray-700' : 'bg-gray-200'
+                            }`}
+                          >
+                            <div
+                              className='bg-blue-600 h-3 rounded-full transition-all'
+                              style={{ width: `${share}%` }}
+                            ></div>
+                          </div>
+                          <span
+                            className={`text-sm font-semibold ${
+                              isDark ? 'text-blue-300' : 'text-blue-600'
+                            }`}
+                          >
+                            {share}%
+                          </span>
+                        </div>
+                        <p
+                          className={`text-xs leading-relaxed ${
+                            isDark ? 'text-gray-400' : 'text-gray-600'
+                          }`}
+                        >
+                          {market.rationale}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p
+                  className={`text-sm ${
+                    isDark ? 'text-gray-400' : 'text-gray-500'
+                  }`}
+                >
+                  Run the analysis to identify your strongest expansion markets.
+                </p>
+              )}
             </div>
 
             {/* World Map */}
@@ -320,319 +503,71 @@ const MarketDashboardPage = () => {
                   : 'bg-white border-gray-200'
               }`}
             >
-              <h3 className='text-lg font-bold mb-4'>
-                Global Demand Intensity
-              </h3>
-              <div
-                className='aspect-video w-full rounded-md overflow-hidden'
-                style={{ background: isDark ? '#111827' : '#f3f4f6' }}
-              >
-                <svg viewBox='0 0 800 400' className='w-full h-full'>
-                  {/* Background */}
-                  <rect
-                    width='800'
-                    height='400'
-                    fill={isDark ? '#0f172a' : '#e0e7ff'}
-                  />
-
-                  {/* Base world map - continents with visible outlines */}
-                  {/* North America */}
-                  <path
-                    d='M 50 80 Q 60 60 80 65 L 120 70 L 140 85 L 155 90 L 165 110 L 170 130 L 165 150 L 155 165 L 140 175 L 120 180 L 100 185 L 85 190 L 75 185 L 65 175 L 55 160 Q 45 140 48 120 Q 50 100 50 80 Z'
-                    fill={isDark ? '#1e293b' : '#cbd5e1'}
-                    stroke={isDark ? '#334155' : '#94a3b8'}
-                    strokeWidth='1.5'
-                  />
-
-                  {/* South America */}
-                  <path
-                    d='M 140 200 L 150 210 L 155 230 L 160 250 L 158 270 L 150 285 L 140 295 L 130 300 L 120 295 L 115 280 L 118 260 L 125 240 L 130 220 L 135 205 Z'
-                    fill={isDark ? '#1e293b' : '#cbd5e1'}
-                    stroke={isDark ? '#334155' : '#94a3b8'}
-                    strokeWidth='1.5'
-                  />
-
-                  {/* Europe */}
-                  <path
-                    d='M 380 80 L 400 75 L 420 80 L 435 85 L 445 95 L 450 110 L 445 125 L 435 135 L 420 140 L 405 142 L 390 140 L 378 130 L 375 115 L 378 95 Z'
-                    fill={isDark ? '#1e293b' : '#cbd5e1'}
-                    stroke={isDark ? '#334155' : '#94a3b8'}
-                    strokeWidth='1.5'
-                  />
-
-                  {/* Africa */}
-                  <path
-                    d='M 390 150 L 410 155 L 425 165 L 435 185 L 440 210 L 438 235 L 430 255 L 415 270 L 400 275 L 385 272 L 375 260 L 370 240 L 372 220 L 378 195 L 385 170 Z'
-                    fill={isDark ? '#1e293b' : '#cbd5e1'}
-                    stroke={isDark ? '#334155' : '#94a3b8'}
-                    strokeWidth='1.5'
-                  />
-
-                  {/* Asia */}
-                  <path
-                    d='M 460 90 L 500 85 L 540 90 L 570 100 L 590 115 L 600 135 L 595 155 L 580 170 L 560 180 L 540 185 L 520 183 L 500 175 L 485 160 L 475 140 L 470 120 L 465 105 Z'
-                    fill={isDark ? '#1e293b' : '#cbd5e1'}
-                    stroke={isDark ? '#334155' : '#94a3b8'}
-                    strokeWidth='1.5'
-                  />
-
-                  {/* Australia */}
-                  <path
-                    d='M 600 240 L 630 235 L 655 240 L 670 255 L 675 275 L 670 290 L 650 300 L 625 302 L 605 295 L 595 280 L 593 260 Z'
-                    fill={isDark ? '#1e293b' : '#cbd5e1'}
-                    stroke={isDark ? '#334155' : '#94a3b8'}
-                    strokeWidth='1.5'
-                  />
-
-                  {/* Highlighted Markets - ordered by percentage */}
-                  {/* USA - 90% (Brightest) */}
-                  <circle cx='120' cy='130' r='38' fill='#2563EB' opacity='0.3'>
-                    <animate
-                      attributeName='r'
-                      values='38;45;38'
-                      dur='2s'
-                      repeatCount='indefinite'
-                    />
-                    <animate
-                      attributeName='opacity'
-                      values='0.3;0.1;0.3'
-                      dur='2s'
-                      repeatCount='indefinite'
-                    />
-                  </circle>
-                  <circle
-                    cx='120'
-                    cy='130'
-                    r='32'
-                    fill='#2563EB'
-                    opacity='0.95'
-                  />
-                  <text
-                    x='120'
-                    y='135'
-                    textAnchor='middle'
-                    fill='white'
-                    fontSize='15'
-                    fontWeight='bold'
-                  >
-                    USA
-                  </text>
-                  <text
-                    x='120'
-                    y='151'
-                    textAnchor='middle'
-                    fill='white'
-                    fontSize='12'
-                    fontWeight='600'
-                  >
-                    90%
-                  </text>
-
-                  {/* Germany - 75% */}
-                  <circle cx='415' cy='110' r='34' fill='#3b82f6' opacity='0.3'>
-                    <animate
-                      attributeName='r'
-                      values='34;40;34'
-                      dur='2s'
-                      repeatCount='indefinite'
-                    />
-                    <animate
-                      attributeName='opacity'
-                      values='0.3;0.1;0.3'
-                      dur='2s'
-                      repeatCount='indefinite'
-                    />
-                  </circle>
-                  <circle
-                    cx='415'
-                    cy='110'
-                    r='28'
-                    fill='#3b82f6'
-                    opacity='0.9'
-                  />
-                  <text
-                    x='415'
-                    y='113'
-                    textAnchor='middle'
-                    fill='white'
-                    fontSize='13'
-                    fontWeight='bold'
-                  >
-                    GER
-                  </text>
-                  <text
-                    x='415'
-                    y='127'
-                    textAnchor='middle'
-                    fill='white'
-                    fontSize='11'
-                    fontWeight='600'
-                  >
-                    75%
-                  </text>
-
-                  {/* Singapore - 60% */}
-                  <circle cx='555' cy='165' r='30' fill='#60a5fa' opacity='0.3'>
-                    <animate
-                      attributeName='r'
-                      values='30;36;30'
-                      dur='2s'
-                      repeatCount='indefinite'
-                    />
-                    <animate
-                      attributeName='opacity'
-                      values='0.3;0.1;0.3'
-                      dur='2s'
-                      repeatCount='indefinite'
-                    />
-                  </circle>
-                  <circle
-                    cx='555'
-                    cy='165'
-                    r='24'
-                    fill='#60a5fa'
-                    opacity='0.85'
-                  />
-                  <text
-                    x='555'
-                    y='168'
-                    textAnchor='middle'
-                    fill='white'
-                    fontSize='12'
-                    fontWeight='bold'
-                  >
-                    SGP
-                  </text>
-                  <text
-                    x='555'
-                    y='181'
-                    textAnchor='middle'
-                    fill='white'
-                    fontSize='10'
-                    fontWeight='600'
-                  >
-                    60%
-                  </text>
-
-                  {/* Japan - 55% */}
-                  <circle cx='620' cy='120' r='28' fill='#60a5fa' opacity='0.3'>
-                    <animate
-                      attributeName='r'
-                      values='28;34;28'
-                      dur='2s'
-                      repeatCount='indefinite'
-                    />
-                    <animate
-                      attributeName='opacity'
-                      values='0.3;0.1;0.3'
-                      dur='2s'
-                      repeatCount='indefinite'
-                    />
-                  </circle>
-                  <circle
-                    cx='620'
-                    cy='120'
-                    r='22'
-                    fill='#60a5fa'
-                    opacity='0.8'
-                  />
-                  <text
-                    x='620'
-                    y='123'
-                    textAnchor='middle'
-                    fill='white'
-                    fontSize='12'
-                    fontWeight='bold'
-                  >
-                    JPN
-                  </text>
-                  <text
-                    x='620'
-                    y='136'
-                    textAnchor='middle'
-                    fill='white'
-                    fontSize='10'
-                    fontWeight='600'
-                  >
-                    55%
-                  </text>
-
-                  {/* Australia - 40% */}
-                  <circle cx='640' cy='270' r='26' fill='#93c5fd' opacity='0.3'>
-                    <animate
-                      attributeName='r'
-                      values='26;32;26'
-                      dur='2s'
-                      repeatCount='indefinite'
-                    />
-                    <animate
-                      attributeName='opacity'
-                      values='0.3;0.1;0.3'
-                      dur='2s'
-                      repeatCount='indefinite'
-                    />
-                  </circle>
-                  <circle
-                    cx='640'
-                    cy='270'
-                    r='20'
-                    fill='#93c5fd'
-                    opacity='0.8'
-                  />
-                  <text
-                    x='640'
-                    y='273'
-                    textAnchor='middle'
-                    fill='white'
-                    fontSize='11'
-                    fontWeight='bold'
-                  >
-                    AUS
-                  </text>
-                  <text
-                    x='640'
-                    y='286'
-                    textAnchor='middle'
-                    fill='white'
-                    fontSize='9'
-                    fontWeight='600'
-                  >
-                    40%
-                  </text>
-                </svg>
-              </div>
-              <div className='flex items-center justify-center gap-4 mt-4'>
-                <div className='flex items-center gap-2'>
-                  <div className='w-3 h-3 rounded-full bg-blue-600'></div>
-                  <span
-                    className={`text-xs ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}
-                  >
-                    High Demand (75%+)
-                  </span>
+              <h3 className='text-lg font-bold mb-4'>Global Demand Signals</h3>
+              {highlights.length > 0 ? (
+                <div className='space-y-5'>
+                  {highlights.map((highlight) => {
+                    const intensity = clampPercentage(highlight.percentage)
+                    return (
+                      <div
+                        key={`${highlight.region}-${highlight.signal}`}
+                        className='space-y-2'
+                      >
+                        <div className='flex items-start justify-between gap-4'>
+                          <div>
+                            <p
+                              className={`text-sm font-semibold uppercase tracking-wide ${
+                                isDark ? 'text-gray-300' : 'text-gray-700'
+                              }`}
+                            >
+                              {highlight.region}
+                            </p>
+                            <p
+                              className={`text-sm ${
+                                isDark ? 'text-emerald-300' : 'text-emerald-600'
+                              }`}
+                            >
+                              {highlight.signal}
+                            </p>
+                          </div>
+                          <span
+                            className={`text-sm font-semibold ${
+                              isDark ? 'text-blue-300' : 'text-blue-600'
+                            }`}
+                          >
+                            {intensity}%
+                          </span>
+                        </div>
+                        <p
+                          className={`text-sm leading-relaxed ${
+                            isDark ? 'text-gray-400' : 'text-gray-600'
+                          }`}
+                        >
+                          {highlight.detail}
+                        </p>
+                        <div
+                          className={`h-1.5 rounded-full overflow-hidden ${
+                            isDark ? 'bg-gray-700' : 'bg-gray-200'
+                          }`}
+                        >
+                          <div
+                            className='h-full bg-blue-500'
+                            style={{ width: `${intensity}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-                <div className='flex items-center gap-2'>
-                  <div className='w-3 h-3 rounded-full bg-blue-400'></div>
-                  <span
-                    className={`text-xs ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}
-                  >
-                    Medium Demand (50-75%)
-                  </span>
-                </div>
-                <div className='flex items-center gap-2'>
-                  <div className='w-3 h-3 rounded-full bg-blue-300'></div>
-                  <span
-                    className={`text-xs ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}
-                  >
-                    Growing Demand (40-50%)
-                  </span>
-                </div>
-              </div>
+              ) : (
+                <p
+                  className={`text-sm ${
+                    isDark ? 'text-gray-400' : 'text-gray-500'
+                  }`}
+                >
+                  Requesting global demand signals from our AI analyst...
+                </p>
+              )}
             </div>
           </div>
 
@@ -646,59 +581,61 @@ const MarketDashboardPage = () => {
                   : 'bg-white border-gray-200'
               }`}
             >
-              <h3 className='text-lg font-bold mb-4'>Anticipated Challenges</h3>
-              <div className='flex justify-center items-center py-4'>
-                <div className='relative w-40 h-40'>
-                  <svg
-                    className='w-full h-full transform -rotate-90'
-                    viewBox='0 0 36 36'
-                  >
-                    <circle
-                      cx='18'
-                      cy='18'
-                      r='15.9155'
-                      fill='none'
-                      stroke='#ef4444'
-                      strokeWidth='4'
-                      strokeDasharray='40, 60'
-                    />
-                    <circle
-                      cx='18'
-                      cy='18'
-                      r='15.9155'
-                      fill='none'
-                      stroke='#f59e0b'
-                      strokeWidth='4'
-                      strokeDasharray='30, 70'
-                      strokeDashoffset='-40'
-                    />
-                    <circle
-                      cx='18'
-                      cy='18'
-                      r='15.9155'
-                      fill='none'
-                      stroke='#2563EB'
-                      strokeWidth='4'
-                      strokeDasharray='30, 70'
-                      strokeDashoffset='-70'
-                    />
-                  </svg>
+              <h3 className='text-lg font-bold mb-4'>
+                Key Execution Constraints
+              </h3>
+              {challenges.length > 0 ? (
+                <div className='space-y-4'>
+                  {challenges.map((challenge) => {
+                    const weight = clampPercentage(challenge.percentage)
+                    return (
+                      <div key={challenge.label} className='space-y-2'>
+                        <div className='flex items-center justify-between gap-3'>
+                          <p
+                            className={`text-sm font-medium ${
+                              isDark ? 'text-gray-200' : 'text-gray-700'
+                            }`}
+                          >
+                            {challenge.label}
+                          </p>
+                          <span
+                            className={`text-sm font-semibold ${
+                              isDark ? 'text-red-300' : 'text-red-500'
+                            }`}
+                          >
+                            {weight}%
+                          </span>
+                        </div>
+                        <p
+                          className={`text-xs leading-relaxed ${
+                            isDark ? 'text-gray-400' : 'text-gray-600'
+                          }`}
+                        >
+                          {challenge.detail}
+                        </p>
+                        <div
+                          className={`h-1.5 rounded-full overflow-hidden ${
+                            isDark ? 'bg-gray-700' : 'bg-gray-200'
+                          }`}
+                        >
+                          <div
+                            className='h-full bg-red-500'
+                            style={{ width: `${weight}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-              </div>
-              <div className='space-y-2'>
-                <div className='flex items-center gap-2'>
-                  <span className='w-3 h-3 rounded-full bg-red-500'></span>
-                  <p className='text-sm'>Logistics (40%)</p>
-                </div>
-                <div className='flex items-center gap-2'>
-                  <span className='w-3 h-3 rounded-full bg-amber-500'></span>
-                  <p className='text-sm'>Regulatory (30%)</p>
-                </div>
-                <div className='flex items-center gap-2'>
-                  <span className='w-3 h-3 rounded-full bg-blue-600'></span>
-                  <p className='text-sm'>Competition (30%)</p>
-                </div>
-              </div>
+              ) : (
+                <p
+                  className={`text-sm ${
+                    isDark ? 'text-gray-400' : 'text-gray-500'
+                  }`}
+                >
+                  We will highlight the main risks once the analysis is ready.
+                </p>
+              )}
             </div>
 
             {/* Recommendations */}
@@ -712,41 +649,31 @@ const MarketDashboardPage = () => {
               <h3 className='text-lg font-bold mb-4'>
                 Strategic Recommendations
               </h3>
-              <ul className='space-y-3'>
-                <li className='flex items-start gap-3'>
-                  <CheckCircle className='w-5 h-5 text-blue-600 mt-1 shrink-0' />
-                  <p
-                    className={`text-sm ${
-                      isDark ? 'text-gray-300' : 'text-gray-600'
-                    }`}
-                  >
-                    Focus on digital marketing strategies tailored for the North
-                    American market to capture high-intent users.
-                  </p>
-                </li>
-                <li className='flex items-start gap-3'>
-                  <CheckCircle className='w-5 h-5 text-blue-600 mt-1 shrink-0' />
-                  <p
-                    className={`text-sm ${
-                      isDark ? 'text-gray-300' : 'text-gray-600'
-                    }`}
-                  >
-                    Explore partnerships with logistics providers in the EU to
-                    mitigate potential supply chain challenges.
-                  </p>
-                </li>
-                <li className='flex items-start gap-3'>
-                  <CheckCircle className='w-5 h-5 text-blue-600 mt-1 shrink-0' />
-                  <p
-                    className={`text-sm ${
-                      isDark ? 'text-gray-300' : 'text-gray-600'
-                    }`}
-                  >
-                    Develop a tiered pricing model to compete effectively with
-                    established players in the Asian market.
-                  </p>
-                </li>
-              </ul>
+              {recommendations.length > 0 ? (
+                <ul className='space-y-3'>
+                  {recommendations.map((rec, index) => (
+                    <li key={index} className='flex items-start gap-3'>
+                      <CheckCircle className='w-5 h-5 text-blue-600 mt-1 shrink-0' />
+                      <p
+                        className={`text-sm leading-relaxed ${
+                          isDark ? 'text-gray-300' : 'text-gray-600'
+                        }`}
+                      >
+                        {rec.text}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p
+                  className={`text-sm ${
+                    isDark ? 'text-gray-400' : 'text-gray-500'
+                  }`}
+                >
+                  Actionable recommendations will appear here once insights are
+                  ready.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -755,7 +682,12 @@ const MarketDashboardPage = () => {
         <div className='flex justify-end'>
           <button
             onClick={handleNext}
-            className='flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors'
+            disabled={isLoading || !insights}
+            className={`flex items-center gap-2 px-6 py-3 font-bold rounded-lg transition-colors ${
+              isLoading || !insights
+                ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
           >
             Rank Ideas
             <ArrowRight className='w-5 h-5' />
