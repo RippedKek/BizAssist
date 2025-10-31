@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Sparkles, Menu, Lightbulb, Wand2, Palette, Network, CheckCircle, BarChart3, PenTool } from 'lucide-react';
+import { Sparkles, Sun, Moon, Lightbulb, Wand2, Palette, Network, CheckCircle, BarChart3, PenTool, User } from 'lucide-react';
 
 const Homepage = () => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -22,22 +22,45 @@ const Homepage = () => {
             </div>
             <span className='text-xl font-bold'>BizAssist</span>
           </div>
-          <div className="flex items-center gap-8">
-            <div className="hidden md:flex items-center gap-9">
-              <a href="#" className={`text-sm font-medium ${isDark ? 'text-gray-300 hover:text-blue-400' : 'text-gray-600 hover:text-blue-600'}`}>Features</a>
-              <a href="#" className={`text-sm font-medium ${isDark ? 'text-gray-300 hover:text-blue-400' : 'text-gray-600 hover:text-blue-600'}`}>Pricing</a>
-              <a href="#" className={`text-sm font-medium ${isDark ? 'text-gray-300 hover:text-blue-400' : 'text-gray-600 hover:text-blue-600'}`}>About</a>
-            </div>
-            <a className={`hidden text-sm font-bold ${isDark ? 'text-white' : 'text-blue-600'} sm:block`} href="#">Login</a>
-            <button className="flex h-10 min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-blue-600 px-5 text-sm font-bold text-white transition-opacity hover:opacity-90">
-              <span className="truncate">Get Started</span>
+          <div className="flex items-center gap-6">
+            <a
+              href='#'
+              className={`${
+                isDark
+                  ? 'text-gray-300 hover:text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              My Pitches
+            </a>
+            <button
+              className={`px-4 py-2 rounded-lg font-medium ${
+                isDark
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              }`}
+            >
+              Log Out
+            </button>
+            <button
+              className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                isDark
+                  ? 'bg-gray-800 hover:bg-gray-700'
+                  : 'bg-white hover:bg-gray-100 border border-gray-300'
+              }`}
+            >
+              <User className="w-5 h-5" />
             </button>
             <button
               onClick={() => setTheme(isDark ? 'light' : 'dark')}
-              className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100 border border-gray-300'}`}
+              className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                isDark
+                  ? 'bg-gray-800 hover:bg-gray-700'
+                  : 'bg-white hover:bg-gray-100 border border-gray-300'
+              }`}
               aria-label="Toggle theme"
             >
-              <Menu className='w-5 h-5' />
+              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
           </div>
         </div>
@@ -58,7 +81,7 @@ const Homepage = () => {
                   </p>
                 </div>
                 <button className="flex h-12 w-full max-w-xs cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-blue-600 px-6 text-base font-bold text-white transition-opacity hover:opacity-90 lg:w-auto">
-                  <span className="truncate">Create Your Pitch Now</span>
+                  <span className="truncate">Get Started for Free</span>
                 </button>
               </div>
               <div className="flex items-center justify-center">
@@ -199,46 +222,33 @@ const Homepage = () => {
       </main>
 
       {/* Footer */}
-      <footer className={`border-t py-12 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+      <footer className={`py-10 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-            <div className="flex flex-col gap-4 md:col-span-1">
-              <a className="flex items-center gap-3" href="#">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-blue-600' : 'bg-emerald-600'}`}>
-                  <Sparkles className='w-5 h-5 text-white' />
-                </div>
-                <span className='text-xl font-bold'>BizAssist</span>
-              </a>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Empowering the next generation of Bangladeshi entrepreneurs.</p>
+          {/* Brand + Tagline */}
+          <div className="flex flex-col items-center text-center gap-3">
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                  isDark ? 'bg-blue-600' : 'bg-emerald-600'
+                }`}
+              >
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-bold">BizAssist</span>
             </div>
-            <div className="grid grid-cols-2 gap-8 md:col-span-3 md:grid-cols-3">
-              <div>
-                <h4 className="font-bold">Product</h4>
-                <ul className="mt-4 space-y-3">
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">Features</a></li>
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">Pricing</a></li>
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">Updates</a></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-bold">Company</h4>
-                <ul className="mt-4 space-y-3">
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">About Us</a></li>
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">Careers</a></li>
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">Contact</a></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-bold">Legal</h4>
-                <ul className="mt-4 space-y-3">
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">Terms of Service</a></li>
-                  <li><a className={`text-sm hover:underline ${isDark ? 'text-gray-300' : 'text-gray-600'}`} href="#">Privacy Policy</a></li>
-                </ul>
-              </div>
-            </div>
+
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Empowering the next generation of Bangladeshi entrepreneurs.
+            </p>
           </div>
-          <div className={`mt-12 border-t pt-8 text-center text-sm ${isDark ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-600'}`}>
-            <p>© 2024 BizAssist. All rights reserved.</p>
+
+          {/* Divider and Credit */}
+          <div
+            className={`mt-8 border-t pt-4 text-center text-sm ${
+              isDark ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-600'
+            }`}
+          >
+            <p>© {new Date().getFullYear()} BizAssist by Team Ultron</p>
           </div>
         </div>
       </footer>
