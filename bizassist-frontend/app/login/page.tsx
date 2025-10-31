@@ -2,17 +2,50 @@
 
 import React, { useState } from 'react'
 import { Sparkles, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
+import { signInWithEmailAndPassword } from 'firebase/auth'
+import { auth } from '../firebase/firebase'
+import { useRouter } from 'next/navigation'
+import { useAppDispatch } from '../redux/hooks'
+import { setUser } from '../redux/features/userSlice'
 
 const LoginPage = () => {
+  const router = useRouter()
   const [theme, setTheme] = useState('dark')
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const isDark = theme === 'dark'
 
-  const handleLogin = () => {
-    window.location.href = '/pitch-generator'
+  const dispatch = useAppDispatch()
+
+  const handleLogin = async () => {
+    try {
+      setError('')
+      setLoading(true)
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      )
+      const user = userCredential.user
+
+      dispatch(
+        setUser({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+        })
+      )
+
+      router.push('/homepage')
+    } catch (error: any) {
+      setError(error.message || 'Failed to sign in')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -172,16 +205,32 @@ const LoginPage = () => {
               </a>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div
+                className={`p-3 rounded-lg text-sm ${
+                  isDark
+                    ? 'bg-red-900/50 text-red-200 border border-red-800'
+                    : 'bg-red-50 text-red-600 border border-red-200'
+                }`}
+              >
+                {error}
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               onClick={handleLogin}
+              disabled={loading}
               className={`w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 ${
                 isDark
                   ? 'bg-blue-600 hover:bg-blue-700 text-white'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              } ${
+                loading ? 'opacity-50 cursor-not-allowed' : ''
               } transition-colors`}
             >
-              Sign In
+              {loading ? 'Signing In...' : 'Sign In'}
               <ArrowRight className='w-5 h-5' />
             </button>
           </div>
