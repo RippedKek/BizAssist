@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
 import {
   Sparkles,
   Copy,
@@ -23,16 +22,21 @@ const PitchGeneratorPage = () => {
     market: true,
     ask: true,
   })
-  const searchParams = useSearchParams();
 
   const isDark = theme === 'dark'
 
   useEffect(() => {
-    const summaryParam = searchParams.get('summary');
-    if (summaryParam) {
-      setIdeaText(decodeURIComponent(summaryParam));
+    if (typeof window === 'undefined') return
+
+    try {
+      const storedSummary = sessionStorage.getItem('bizassist-shared-summary')
+      if (storedSummary) {
+        setIdeaText(storedSummary)
+      }
+    } catch (error) {
+      console.error('Error retrieving summary for pitch generator:', error)
     }
-  }, [searchParams]);
+  }, [])
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
