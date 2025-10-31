@@ -10,8 +10,16 @@ import {
   User,
   ArrowRight,
 } from 'lucide-react'
+import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { setDoc, doc } from 'firebase/firestore'
+import { auth, db } from '../firebase/firebase'
+import { useRouter } from 'next/navigation'
+import { useAppDispatch } from '../redux/hooks'
+import { setUser } from '../redux/features/userSlice'
 
 const SignUpPage = () => {
+  const router = useRouter()
+  const dispatch = useAppDispatch()
   const [theme, setTheme] = useState('dark')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -19,12 +27,59 @@ const SignUpPage = () => {
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const isDark = theme === 'dark'
 
-  const handleSignUp = () => {
-    // Add signup logic here
-    window.location.href = '/pitch-generator'
+  const handleSignUp = async () => {
+    if (!email || !password || !name || !confirmPassword) {
+      setError('Please fill in all fields')
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long')
+      return
+    }
+
+    try {
+      setError('')
+      setLoading(true)
+
+      // Create user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      )
+      const user = userCredential.user
+
+      // Add user data to Firestore
+      await setDoc(doc(db, 'users', email), {
+        name: name,
+      })
+
+      // Update Redux store
+      dispatch(
+        setUser({
+          uid: user.uid,
+          email: user.email,
+          displayName: name,
+        })
+      )
+
+      router.push('/homepage')
+    } catch (error: any) {
+      setError(error.message || 'Failed to create account')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -270,16 +325,32 @@ const SignUpPage = () => {
               </span>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div
+                className={`p-3 rounded-lg text-sm ${
+                  isDark
+                    ? 'bg-red-900/50 text-red-200 border border-red-800'
+                    : 'bg-red-50 text-red-600 border border-red-200'
+                }`}
+              >
+                {error}
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               onClick={handleSignUp}
+              disabled={loading}
               className={`w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 ${
                 isDark
                   ? 'bg-blue-600 hover:bg-blue-700 text-white'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              } ${
+                loading ? 'opacity-50 cursor-not-allowed' : ''
               } transition-colors`}
             >
-              Create Account
+              {loading ? 'Creating Account...' : 'Create Account'}
               <ArrowRight className='w-5 h-5' />
             </button>
           </div>
