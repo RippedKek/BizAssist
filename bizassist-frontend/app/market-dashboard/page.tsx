@@ -51,6 +51,9 @@ const clampPercentage = (value: number) => {
   if (Number.isNaN(value)) return 0
   return Math.min(100, Math.max(0, value))
 }
+import dynamic from 'next/dynamic';
+
+const RealWorldMap = dynamic(() => import('@/components/RealWorldMap'), { ssr: false });
 
 const MarketDashboardPage = () => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
