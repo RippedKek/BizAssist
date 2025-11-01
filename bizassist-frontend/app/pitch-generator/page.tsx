@@ -1,26 +1,47 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import {
-  Sparkles,
-  Copy,
-  Download,
-  ThumbsUp,
-  ThumbsDown,
-  RefreshCw,
-  ChevronDown,
-} from 'lucide-react'
+import { Sparkles, Copy, Download, ChevronDown, Check, Wand2, X, Clock, FileText } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
 
+interface PitchSection {
+  sectionName: string
+  content: string
+  timeMinutes: number
+  timeSeconds: number
+  notes?: string
+}
+
+interface PitchSpeechData {
+  sections: PitchSection[]
+  totalTimeMinutes: number
+  totalTimeSeconds: number
+}
+
+const availableSections = [
+  { id: 'intro', label: 'Introduction', description: 'Opening hook and overview' },
+  { id: 'problem', label: 'The Problem', description: 'Problem statement and pain points' },
+  { id: 'solution', label: 'The Solution', description: 'Your unique solution' },
+  { id: 'market', label: 'Target Market', description: 'Market analysis and opportunity' },
+  { id: 'businessModel', label: 'Business Model', description: 'Revenue streams and monetization' },
+  { id: 'traction', label: 'Traction', description: 'Progress and achievements' },
+  { id: 'team', label: 'Team', description: 'Team members and expertise' },
+  { id: 'ask', label: 'The Ask', description: 'Funding needs and use of funds' },
+  { id: 'conclusion', label: 'Conclusion', description: 'Closing statement and next steps' },
+]
+
 const PitchGeneratorPage = () => {
-  const [theme, setTheme] = useState('dark')
-  const [ideaText, setIdeaText] = useState('')
-  const [expandedSections, setExpandedSections] = useState({
-    problem: true,
-    solution: true,
-    market: true,
-    ask: true,
-  })
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [summary, setSummary] = useState('')
+  const [showNameModal, setShowNameModal] = useState(false)
+  const [businessTitle, setBusinessTitle] = useState('')
+  const [businessNameSuggestions, setBusinessNameSuggestions] = useState<string[]>([])
+  const [loadingNames, setLoadingNames] = useState(false)
+  const [selectedSections, setSelectedSections] = useState<string[]>(['problem', 'solution', 'market', 'ask'])
+  const [timeLimit, setTimeLimit] = useState(5)
+  const [pitchSpeech, setPitchSpeech] = useState<PitchSpeechData | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const isDark = theme === 'dark'
 
@@ -30,319 +51,460 @@ const PitchGeneratorPage = () => {
     try {
       const storedSummary = sessionStorage.getItem('bizassist-shared-summary')
       if (storedSummary) {
-        setIdeaText(storedSummary)
+        setSummary(storedSummary)
+        // Show name modal when page loads with summary
+        setShowNameModal(true)
+        fetchBusinessNames(storedSummary)
       }
     } catch (error) {
-      console.error('Error retrieving summary for pitch generator:', error)
+      console.error('Error retrieving summary:', error)
     }
   }, [])
 
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }))
+  const fetchBusinessNames = async (summaryText: string) => {
+    setLoadingNames(true)
+    try {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/business-names`
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ summary: summaryText }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate business names')
+      }
+
+      const result = await response.json()
+      setBusinessNameSuggestions(result.data.names || [])
+    } catch (error) {
+      console.error('Error fetching business names:', error)
+    } finally {
+      setLoadingNames(false)
+    }
   }
 
-  const pitchData = {
-    problem:
-      'Office workers in Dhaka often struggle to find healthy, affordable, and quick lunch options. They resort to unhealthy street food or expensive restaurants, compromising their health and budget. Existing delivery services offer limited variety and inconsistent quality of homemade meals.',
-    solution:
-      'A mobile application that connects office workers with a network of verified home cooks. Our platform will offer a daily-changing menu of fresh, homemade meals, ensuring quality and hygiene. Features include subscription plans, pre-ordering, and real-time delivery tracking for maximum convenience.',
-    market:
-      'Our primary target market is young to middle-aged professionals (22-45 years old) working in corporate offices within major commercial hubs of Dhaka, such as Gulshan, Banani, and Motijheel. These individuals are tech-savvy, health-conscious, and value convenience.',
-    ask: 'We are seeking $50,000 in seed funding to finalize app development, onboard the first 50 home cooks, and launch a targeted marketing campaign to acquire our initial 1,000 users. Funds will be allocated to technology, marketing, and operational overheads for the first six months.',
+  const handleSelectName = (name: string) => {
+    setBusinessTitle(name)
+    setShowNameModal(false)
+  }
+
+  const handleCustomName = () => {
+    setShowNameModal(false)
+  }
+
+  const toggleSection = (sectionId: string) => {
+    setSelectedSections((prev) =>
+      prev.includes(sectionId)
+        ? prev.filter((id) => id !== sectionId)
+        : [...prev, sectionId]
+    )
+  }
+
+  const handleGeneratePitch = async () => {
+    if (!businessTitle.trim()) {
+      alert('Please enter or select a business title')
+      return
+    }
+
+    if (!summary.trim()) {
+      alert('Please provide your business idea')
+      return
+    }
+
+    if (selectedSections.length === 0) {
+      alert('Please select at least one section for your pitch')
+      return
+    }
+
+    setIsGenerating(true)
+    try {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/pitch-speech`
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          summary,
+          businessTitle,
+          selectedSections,
+          timeLimit,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate pitch speech')
+      }
+
+      const result = await response.json()
+      setPitchSpeech(result.data)
+    } catch (error) {
+      console.error('Error generating pitch:', error)
+      alert('Failed to generate pitch. Please try again.')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleDownloadCSV = () => {
+    if (!pitchSpeech) return
+
+    const csvRows = [
+      ['Section', 'Content', 'Time (Minutes)', 'Time (Seconds)', 'Notes'],
+      ...pitchSpeech.sections.map((section) => [
+        section.sectionName,
+        `"${section.content.replace(/"/g, '""')}"`,
+        section.timeMinutes.toString(),
+        section.timeSeconds.toString(),
+        section.notes ? `"${section.notes.replace(/"/g, '""')}"` : '',
+      ]),
+      [
+        'TOTAL',
+        '',
+        pitchSpeech.totalTimeMinutes.toString(),
+        pitchSpeech.totalTimeSeconds.toString(),
+        '',
+      ],
+    ]
+
+    const csvContent = csvRows.map((row) => row.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `${businessTitle || 'pitch'}_speech.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const handleCopyPitch = async () => {
+    if (!pitchSpeech) return
+
+    const fullPitch = pitchSpeech.sections
+      .map((section) => {
+        const timeStr = `${section.timeMinutes}m ${section.timeSeconds}s`
+        return `[${timeStr}] ${section.sectionName.toUpperCase()}\n${section.content}${section.notes ? `\n\nNote: ${section.notes}` : ''}`
+      })
+      .join('\n\n---\n\n')
+
+    try {
+      await navigator.clipboard.writeText(fullPitch)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      console.error('Error copying:', error)
+    }
+  }
+
+  const formatTime = (minutes: number, seconds: number) => {
+    return `${minutes}m ${seconds}s`
   }
 
   return (
     <div
       className={`min-h-screen ${
-        isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
+        isDark
+          ? 'bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white'
+          : 'bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900'
       }`}
     >
       <Navbar
         theme={theme}
-        onThemeChange={(newTheme) => setTheme(newTheme)}
+        onThemeChange={(newTheme: 'dark' | 'light') => setTheme(newTheme)}
         showHomeLink={true}
         showMyPitchesLink={true}
         showLogout={true}
       />
 
-      {/* Main Content */}
-      <div className='max-w-7xl mx-auto px-6 py-12'>
-        <div className='grid grid-cols-1 lg:grid-cols-2 gap-8'>
-          {/* Left Column - Input */}
-          <div>
-            <h1 className='text-4xl font-bold mb-4 leading-tight'>
-              Let's build your pitch. Start with your raw idea.
-            </h1>
-            <p
-              className={`text-lg mb-8 ${
-                isDark ? 'text-gray-400' : 'text-gray-600'
-              }`}
-            >
-              Just type or paste your business concept below. Our AI will
-              structure it into a professional pitch in seconds.
-            </p>
-
-            <div className='mb-6'>
-              <label className='block text-sm font-medium mb-3'>
-                Your Business Idea
-              </label>
-              <textarea
-                value={ideaText}
-                onChange={(e) => setIdeaText(e.target.value)}
-                placeholder='e.g., I want to create a mobile app that delivers fresh, homemade food to office workers in Dhaka...'
-                className={`w-full h-96 p-4 rounded-xl border ${
-                  isDark
-                    ? 'bg-gray-900 border-gray-800 text-white placeholder-gray-600 focus:border-gray-700'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-emerald-500'
-                } resize-none focus:outline-none focus:ring-2 ${
-                  isDark ? 'focus:ring-blue-600' : 'focus:ring-emerald-600'
-                } focus:ring-opacity-50`}
-              />
-              <div
-                className={`text-sm mt-2 ${
-                  isDark ? 'text-gray-500' : 'text-gray-500'
+      {/* Business Name Modal */}
+      {showNameModal && (
+        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4'>
+          <div
+            className={`w-full max-w-2xl rounded-xl border ${
+              isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+            } shadow-2xl`}
+          >
+            <div className={`p-6 border-b ${isDark ? 'border-gray-800' : 'border-gray-200'} flex justify-between items-center`}>
+              <h2 className='text-2xl font-bold'>Choose Your Business Name</h2>
+              <button
+                onClick={() => setShowNameModal(false)}
+                className={`p-2 rounded-lg transition-colors ${
+                  isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'
                 }`}
               >
-                0/2000 words
+                <X className='w-5 h-5' />
+              </button>
+            </div>
+
+            <div className='p-6 space-y-6'>
+              {loadingNames ? (
+                <div className='flex items-center justify-center py-8'>
+                  <Sparkles className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-500' : 'text-emerald-500'}`} />
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <p className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Select a suggested name or enter your own:
+                    </p>
+                    <div className='grid grid-cols-2 gap-3 mb-4'>
+                      {businessNameSuggestions.map((name, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleSelectName(name)}
+                          className={`p-3 rounded-lg border text-left transition-all ${
+                            isDark
+                              ? 'border-gray-700 hover:border-blue-500 hover:bg-gray-800'
+                              : 'border-gray-300 hover:border-emerald-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          <span className='font-medium'>{name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Or enter your own business name:
+                    </label>
+                    <input
+                      type='text'
+                      value={businessTitle}
+                      onChange={(e) => setBusinessTitle(e.target.value)}
+                      placeholder='Enter business name...'
+                      className={`w-full px-4 py-3 rounded-lg border ${
+                        isDark
+                          ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-blue-500'
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-emerald-500'
+                      } focus:outline-none focus:ring-2 ${
+                        isDark ? 'focus:ring-blue-500/20' : 'focus:ring-emerald-500/20'
+                      }`}
+                    />
+                  </div>
+
+                  <div className='flex gap-3'>
+                    <button
+                      onClick={handleCustomName}
+                      disabled={!businessTitle.trim()}
+                      className={`flex-1 py-3 rounded-lg font-semibold transition-all ${
+                        isDark
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-700 disabled:opacity-50'
+                          : 'bg-emerald-600 hover:bg-emerald-700 text-white disabled:bg-gray-300 disabled:opacity-50'
+                      }`}
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className='max-w-7xl mx-auto px-6 lg:px-12 py-12'>
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-12'>
+          {/* Left Column - Input */}
+          <div className='space-y-8'>
+            <div>
+              <h1
+                className={`text-5xl font-black mb-4 leading-tight ${
+                  isDark ? 'text-white' : 'bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent'
+                }`}
+              >
+                Transform Your Idea Into a Professional Pitch
+              </h1>
+              <p className={`text-lg leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Create a customized pitch speech with precise timing for each section.
+              </p>
+            </div>
+
+            {/* Business Title Display */}
+            {businessTitle && (
+              <div className={`p-4 rounded-xl border ${isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'}`}>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Business Name:</p>
+                <p className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{businessTitle}</p>
+              </div>
+            )}
+
+            {/* Section Selection */}
+            <div className={`p-6 rounded-2xl border shadow-xl ${isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <label className='block text-lg font-bold mb-4'>Select Pitch Sections</label>
+              <div className='space-y-3'>
+                {availableSections.map((section) => (
+                  <label
+                    key={section.id}
+                    className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                      selectedSections.includes(section.id)
+                        ? isDark
+                          ? 'border-blue-500 bg-blue-500/10'
+                          : 'border-emerald-500 bg-emerald-50'
+                        : isDark
+                          ? 'border-gray-700 hover:border-gray-600'
+                          : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type='checkbox'
+                      checked={selectedSections.includes(section.id)}
+                      onChange={() => toggleSection(section.id)}
+                      className='mt-1 w-5 h-5 rounded'
+                    />
+                    <div className='flex-1'>
+                      <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{section.label}</p>
+                      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{section.description}</p>
+                    </div>
+                  </label>
+                ))}
               </div>
             </div>
 
-            <button
-              className={`w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 ${
-                isDark
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-              } transition-colors`}
-            >
-              <Sparkles className='w-5 h-5' />
-              Generate Pitch
-            </button>
+            {/* Time Limit Selection */}
+            <div className={`p-6 rounded-2xl border shadow-xl ${isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <label className='block text-lg font-bold mb-4 flex items-center gap-2'>
+                <Clock className='w-5 h-5' />
+                Time Limit
+              </label>
+              <div className='flex items-center gap-4'>
+                <input
+                  type='range'
+                  min='2'
+                  max='15'
+                  value={timeLimit}
+                  onChange={(e) => setTimeLimit(Number(e.target.value))}
+                  className='flex-1'
+                />
+                <span className={`text-2xl font-bold ${isDark ? 'text-blue-400' : 'text-emerald-600'}`}>
+                  {timeLimit} min
+                </span>
+              </div>
+              <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Recommended: 3-5 minutes for elevator pitch, 5-10 minutes for detailed presentation
+              </p>
+            </div>
 
             <button
-              onClick={() => {
-                const params = new URLSearchParams();
-                if (ideaText) {
-                  params.set('idea', encodeURIComponent(ideaText));
-                }
-                window.location.href = `/visual-branding?${params.toString()}`;
-              }}
-              className={`w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 mt-4 ${
+              onClick={handleGeneratePitch}
+              disabled={!businessTitle || !summary.trim() || selectedSections.length === 0 || isGenerating}
+              className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition-all shadow-lg ${
                 isDark
-                  ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                  : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-              } transition-colors`}
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white disabled:from-gray-700 disabled:to-gray-700'
+                  : 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white disabled:from-gray-300 disabled:to-gray-300'
+              } disabled:cursor-not-allowed disabled:opacity-50 hover:shadow-xl`}
             >
-              Create Visual Branding
+              {isGenerating ? (
+                <>
+                  <Sparkles className='w-6 h-6 animate-spin' />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className='w-6 h-6' />
+                  Generate Pitch
+                </>
+              )}
             </button>
           </div>
 
           {/* Right Column - Output */}
           <div>
-            <div
-              className={`rounded-2xl border p-8 ${
-                isDark
-                  ? 'bg-gray-900 border-gray-800'
-                  : 'bg-white border-gray-200'
-              }`}
-            >
-              <div className='flex items-center justify-between mb-8'>
-                <h2 className='text-2xl font-bold'>
-                  Here's Your Structured Business Pitch
-                </h2>
-                <div className='flex gap-2'>
-                  <button
-                    className={`p-2 rounded-lg ${
-                      isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-                    }`}
-                    aria-label="Copy pitch"
-                  >
-                    <Copy className='w-5 h-5' />
-                  </button>
-                  <button
-                    className={`p-2 rounded-lg ${
-                      isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-                    }`}
-                    aria-label="Download pitch"
-                  >
-                    <Download className='w-5 h-5' />
-                  </button>
+            {pitchSpeech ? (
+              <div className={`rounded-2xl border shadow-xl overflow-hidden ${isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'}`}>
+                {/* Header */}
+                <div
+                  className={`px-8 py-6 border-b ${
+                    isDark ? 'border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900' : 'border-gray-200 bg-gradient-to-r from-gray-50 to-white'
+                  }`}
+                >
+                  <div className='flex items-start justify-between mb-2'>
+                    <div>
+                      <h2 className='text-2xl font-bold mb-1'>Your Pitch Speech</h2>
+                      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Total Time: {formatTime(pitchSpeech.totalTimeMinutes, pitchSpeech.totalTimeSeconds)}
+                      </p>
+                    </div>
+                    <div className='flex gap-2'>
+                      <button
+                        onClick={handleCopyPitch}
+                        className={`p-2.5 rounded-lg transition-all ${
+                          copied
+                            ? isDark
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-emerald-100 text-emerald-700'
+                            : isDark
+                              ? 'hover:bg-gray-700'
+                              : 'hover:bg-gray-100'
+                        }`}
+                        aria-label='Copy pitch'
+                      >
+                        {copied ? <Check className='w-5 h-5' /> : <Copy className='w-5 h-5' />}
+                      </button>
+                      <button
+                        onClick={handleDownloadCSV}
+                        className={`p-2.5 rounded-lg ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-all`}
+                        aria-label='Download CSV'
+                      >
+                        <FileText className='w-5 h-5' />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pitch Content */}
+                <div className='p-8 space-y-6 max-h-[calc(100vh-150px)] overflow-y-auto'>
+                  {pitchSpeech.sections.map((section, idx) => (
+                    <div
+                      key={idx}
+                      className={`border rounded-xl overflow-hidden ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
+                    >
+                      <div
+                        className={`px-6 py-4 flex items-center justify-between ${
+                          isDark ? 'bg-gray-900/50' : 'bg-gray-50'
+                        }`}
+                      >
+                        <div className='flex items-center gap-3'>
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDark ? 'bg-blue-600' : 'bg-emerald-600'}`}>
+                            <span className='text-white font-bold'>{idx + 1}</span>
+                          </div>
+                          <div>
+                            <h3 className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                              {section.sectionName}
+                            </h3>
+                            <p className={`text-sm ${isDark ? 'text-blue-400' : 'text-emerald-600'} font-medium`}>
+                              {formatTime(section.timeMinutes, section.timeSeconds)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className={`px-6 py-4 ${isDark ? 'text-gray-300' : 'text-gray-700'} leading-relaxed whitespace-pre-wrap`}>
+                        {section.content}
+                        {section.notes && (
+                          <div className={`mt-3 pt-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                            <p className={`text-sm italic ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                              <strong>Note:</strong> {section.notes}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-
-              {/* Pitch Sections */}
-              <div className='space-y-4'>
-                {/* Problem Section */}
-                <div
-                  className={`border rounded-xl ${
-                    isDark ? 'border-gray-800' : 'border-gray-200'
-                  }`}
-                >
-                  <button
-                    onClick={() => toggleSection('problem')}
-                    className={`w-full px-6 py-4 flex items-center justify-between ${
-                      isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'
-                    } rounded-xl transition-colors`}
-                  >
-                    <span className='font-semibold'>
-                      The Problem You're Solving
-                    </span>
-                    <ChevronDown
-                      className={`w-5 h-5 transition-transform ${
-                        expandedSections.problem ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </button>
-                  {expandedSections.problem && (
-                    <div
-                      className={`px-6 pb-6 ${
-                        isDark ? 'text-gray-300' : 'text-gray-700'
-                      } leading-relaxed`}
-                    >
-                      {pitchData.problem}
-                    </div>
-                  )}
-                </div>
-
-                {/* Solution Section */}
-                <div
-                  className={`border rounded-xl ${
-                    isDark ? 'border-gray-800' : 'border-gray-200'
-                  }`}
-                >
-                  <button
-                    onClick={() => toggleSection('solution')}
-                    className={`w-full px-6 py-4 flex items-center justify-between ${
-                      isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'
-                    } rounded-xl transition-colors`}
-                  >
-                    <span className='font-semibold'>Your Unique Solution</span>
-                    <ChevronDown
-                      className={`w-5 h-5 transition-transform ${
-                        expandedSections.solution ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </button>
-                  {expandedSections.solution && (
-                    <div
-                      className={`px-6 pb-6 ${
-                        isDark ? 'text-gray-300' : 'text-gray-700'
-                      } leading-relaxed`}
-                    >
-                      {pitchData.solution}
-                    </div>
-                  )}
-                </div>
-
-                {/* Market Section */}
-                <div
-                  className={`border rounded-xl ${
-                    isDark ? 'border-gray-800' : 'border-gray-200'
-                  }`}
-                >
-                  <button
-                    onClick={() => toggleSection('market')}
-                    className={`w-full px-6 py-4 flex items-center justify-between ${
-                      isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'
-                    } rounded-xl transition-colors`}
-                  >
-                    <span className='font-semibold'>Your Target Market</span>
-                    <ChevronDown
-                      className={`w-5 h-5 transition-transform ${
-                        expandedSections.market ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </button>
-                  {expandedSections.market && (
-                    <div
-                      className={`px-6 pb-6 ${
-                        isDark ? 'text-gray-300' : 'text-gray-700'
-                      } leading-relaxed`}
-                    >
-                      {pitchData.market}
-                    </div>
-                  )}
-                </div>
-
-                {/* Ask Section */}
-                <div
-                  className={`border rounded-xl ${
-                    isDark ? 'border-gray-800' : 'border-gray-200'
-                  }`}
-                >
-                  <button
-                    onClick={() => toggleSection('ask')}
-                    className={`w-full px-6 py-4 flex items-center justify-between ${
-                      isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'
-                    } rounded-xl transition-colors`}
-                  >
-                    <span className='font-semibold'>
-                      The Ask (Funding/Resource Needs)
-                    </span>
-                    <ChevronDown
-                      className={`w-5 h-5 transition-transform ${
-                        expandedSections.ask ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </button>
-                  {expandedSections.ask && (
-                    <div
-                      className={`px-6 pb-6 ${
-                        isDark ? 'text-gray-300' : 'text-gray-700'
-                      } leading-relaxed`}
-                    >
-                      {pitchData.ask}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Feedback Section */}
+            ) : (
               <div
-                className={`mt-8 pt-6 border-t ${
-                  isDark ? 'border-gray-800' : 'border-gray-200'
-                } flex items-center justify-between`}
+                className={`rounded-2xl border shadow-xl p-12 text-center ${
+                  isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'
+                }`}
               >
-                <span
-                  className={`text-sm ${
-                    isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}
-                >
-                  Was this helpful?
-                </span>
-                <div className='flex gap-4'>
-                  <button
-                    className={`p-2 rounded-lg ${
-                      isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-                    }`}
-                    aria-label="Like this pitch"
-                  >
-                    <ThumbsUp className='w-5 h-5' />
-                  </button>
-                  <button
-                    className={`p-2 rounded-lg ${
-                      isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-                    }`}
-                    aria-label="Dislike this pitch"
-                  >
-                    <ThumbsDown className='w-5 h-5' />
-                  </button>
-                  <button
-                    className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                      isDark
-                        ? 'bg-gray-800 hover:bg-gray-700'
-                        : 'bg-gray-100 hover:bg-gray-200'
-                    }`}
-                    aria-label="Regenerate pitch"
-                  >
-                    <RefreshCw className='w-4 h-4' />
-                    Regenerate
-                  </button>
-                </div>
+                <Wand2 className={`w-16 h-16 mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
+                <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Your generated pitch speech will appear here
+                </p>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

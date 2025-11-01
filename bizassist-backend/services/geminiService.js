@@ -192,6 +192,93 @@ class GeminiService {
       throw new Error('Invalid JSON returned from Gemini')
     }
   }
+
+  async generateBusinessNames(summary) {
+    const prompt = `You are a creative brand naming expert specializing in Bangladesh market. Based on the following business idea summary, generate 5-6 catchy, memorable, and professional business names. Names should be:
+    - Relevant to the business concept
+    - Suitable for Bangladesh market (considering local language and culture)
+    - Professional and brandable
+    - Easy to pronounce and remember
+    - Between 2-4 words each
+
+    Business Summary: ${summary}
+
+    Respond with a single JSON object that strictly matches the following TypeScript interface:
+
+    interface BusinessNames {
+      names: string[]
+    }
+
+    Rules:
+    - Provide exactly 5-6 business name suggestions
+    - Each name should be a string (just the name, no additional description)
+    - Names should be unique and creative
+    - Consider incorporating Bengali/English hybrid names if appropriate
+    - Focus on names that convey the business value proposition
+
+    Return ONLY valid JSON, without any backticks, code fences, or commentary.`
+
+    const result = await this.model.generateContent(prompt)
+    const response = await result.response
+    const rawText = response.text().trim()
+    const cleanedText = rawText.replace(/```json\n?|```/gi, '').trim()
+
+    try {
+      return JSON.parse(cleanedText)
+    } catch (error) {
+      console.error('Failed to parse business names JSON:', cleanedText)
+      throw new Error('Invalid JSON returned from Gemini')
+    }
+  }
+
+  async generatePitchSpeech(summary, businessTitle, selectedSections, timeLimit) {
+    const sections = selectedSections.join(', ')
+    const prompt = `You are a professional pitch coach and presentation expert. Generate a complete pitch speech for a business idea with precise timing information for each section.
+
+    Business Summary: ${summary}
+    Business Title: ${businessTitle}
+    Selected Sections: ${sections}
+    Total Time Limit: ${timeLimit} minutes
+
+    Respond with a single JSON object that strictly matches the following TypeScript interface:
+
+    interface PitchSpeech {
+      sections: Array<{
+        sectionName: string
+        content: string
+        timeMinutes: number
+        timeSeconds: number
+        notes?: string
+      }>
+      totalTimeMinutes: number
+      totalTimeSeconds: number
+    }
+
+    Rules:
+    - Generate speech content for each selected section
+    - Distribute the total time (${timeLimit} minutes) proportionally across all sections
+    - content: The actual speech text that should be spoken for that section
+    - timeMinutes and timeSeconds: Precise timing for each section (should sum to approximately ${timeLimit} minutes)
+    - notes: Optional tips or reminders for delivering that section
+    - Make the speech conversational and engaging, suitable for investor presentations
+    - Focus on Bangladesh market context
+    - Ensure the speech flows naturally between sections
+    - Total time should be close to but not exceed ${timeLimit} minutes
+
+    Return ONLY valid JSON, without any backticks, code fences, or commentary.`
+
+    const result = await this.model.generateContent(prompt)
+    const response = await result.response
+    const rawText = response.text().trim()
+    const cleanedText = rawText.replace(/```json\n?|```/gi, '').trim()
+
+    try {
+      return JSON.parse(cleanedText)
+    } catch (error) {
+      console.error('Failed to parse pitch speech JSON:', cleanedText)
+      throw new Error('Invalid JSON returned from Gemini')
+    }
+  }
 }
 
 module.exports = new GeminiService()
