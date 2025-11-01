@@ -152,6 +152,46 @@ class GeminiService {
       throw new Error('Invalid JSON returned from Gemini')
     }
   }
+
+  async generateCompetitors(summary) {
+    const prompt = `You are a senior competitive intelligence analyst specializing in the Bangladesh market. Based on the following business idea summary, identify the top 3 real competitors that are OPERATING IN BANGLADESH ONLY. For each competitor, provide their actual company name, a valid website URL (if available), and a brief description of what they do.
+
+    Business Summary: ${summary}
+
+    Respond with a single JSON object that strictly matches the following TypeScript interface:
+
+    interface Competitors {
+      competitors: Array<{
+        title: string
+        website: string
+        description: string
+      }>
+    }
+
+    Rules:
+    - Provide exactly 3 competitors
+    - CRITICAL: ALL competitors MUST be companies/brands that are currently operating in Bangladesh. Do not include international or regional competitors unless they have active operations in Bangladesh.
+    - If you cannot find 3 Bangladesh-based competitors, still provide 3 but indicate in the description if they are smaller/local players or emerging companies in the Bangladesh market.
+    - title: The actual company/brand name operating in Bangladesh
+    - website: A valid URL (use "https://" format). If no website is known, use "#" or leave as empty string
+    - description: A concise 1-2 sentence description of what the competitor does in Bangladesh and why they're relevant to this business idea
+    - Focus exclusively on real, existing companies with operations in Bangladesh
+    - Be realistic and honest about competitive landscape in the Bangladesh market
+
+    Return ONLY valid JSON, without any backticks, code fences, or commentary.`
+
+    const result = await this.model.generateContent(prompt)
+    const response = await result.response
+    const rawText = response.text().trim()
+    const cleanedText = rawText.replace(/```json\n?|```/gi, '').trim()
+
+    try {
+      return JSON.parse(cleanedText)
+    } catch (error) {
+      console.error('Failed to parse competitors JSON:', cleanedText)
+      throw new Error('Invalid JSON returned from Gemini')
+    }
+  }
 }
 
 module.exports = new GeminiService()

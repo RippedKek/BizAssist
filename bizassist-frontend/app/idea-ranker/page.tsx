@@ -1,15 +1,42 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Sparkles, Download, Share, Sun, Moon, Loader2 } from 'lucide-react'
+import { Sparkles, Download, Share, Loader2, ExternalLink } from 'lucide-react'
+import Navbar from '../components/layout/Navbar'
+
+type RankerData = {
+  ideaTitle: string
+  overallScore: number
+  readinessLabel: string
+  scores: {
+    novelty: { score: number; justification: string }
+    localCapability: { score: number; justification: string }
+    feasibility: { score: number; justification: string }
+    sustainability: { score: number; justification: string }
+    globalDemand: { score: number; justification: string }
+  }
+  nextSteps: Array<{ text: string }>
+}
+
+type Competitor = {
+  title: string
+  website: string
+  description: string
+}
+
+type CompetitorsData = {
+  competitors: Competitor[]
+}
 
 const IdeaRankerPage = () => {
-  const [theme, setTheme] = useState('dark')
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [summary, setSummary] = useState('')
-  const [rankerData, setRankerData] = useState(null)
+  const [rankerData, setRankerData] = useState<RankerData | null>(null)
+  const [competitors, setCompetitors] = useState<CompetitorsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const canvasRef = useRef(null)
+  const [isLoadingCompetitors, setIsLoadingCompetitors] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const isDark = theme === 'dark'
 
   useEffect(() => {
@@ -20,6 +47,7 @@ const IdeaRankerPage = () => {
       if (storedSummary) {
         setSummary(storedSummary)
         fetchIdeaRankerScore(storedSummary)
+        fetchCompetitors(storedSummary)
       } else {
         setError('No business summary found. Please go back and create one.')
         setIsLoading(false)
@@ -31,7 +59,7 @@ const IdeaRankerPage = () => {
     }
   }, [])
 
-  const fetchIdeaRankerScore = async (summaryText) => {
+  const fetchIdeaRankerScore = async (summaryText: string) => {
     setIsLoading(true)
     setError(null)
 
@@ -59,11 +87,40 @@ const IdeaRankerPage = () => {
     }
   }
 
+  const fetchCompetitors = async (summaryText: string) => {
+    setIsLoadingCompetitors(true)
+
+    try {
+      const apiUrl = `${
+        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      }/api/v1/competitors`
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ summary: summaryText }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch competitors')
+      }
+
+      const result = await response.json()
+      setCompetitors(result.data)
+    } catch (error) {
+      console.error('Error fetching competitors:', error)
+      // Don't show error to user, just log it
+    } finally {
+      setIsLoadingCompetitors(false)
+    }
+  }
+
   useEffect(() => {
     if (!rankerData || !canvasRef.current) return
 
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    
     const width = canvas.width
     const height = canvas.height
     const centerX = width / 2
@@ -166,16 +223,6 @@ const IdeaRankerPage = () => {
     })
   }, [rankerData, theme, isDark])
 
-  const handleLogout = async () => {
-    try {
-      const { getAuth, signOut } = await import('firebase/auth')
-      const auth = getAuth()
-      await signOut(auth)
-    } catch (error) {
-      console.error('Error signing out:', error)
-    }
-  }
-
   const handleGeneratePitch = () => {
     if (typeof window !== 'undefined' && summary) {
       try {
@@ -249,81 +296,13 @@ const IdeaRankerPage = () => {
           : 'bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900'
       }`}
     >
-      {/* Header */}
-      <nav
-        className={`backdrop-blur-sm border-b ${
-          isDark
-            ? 'border-gray-800 bg-gray-900/80'
-            : 'border-gray-200 bg-white/80'
-        } sticky top-0 z-40`}
-      >
-        <div className='max-w-7xl mx-auto px-6 py-4 flex items-center justify-between'>
-          <div className='flex items-center gap-3'>
-            <div
-              className={`w-10 h-10 rounded-xl ${
-                isDark
-                  ? 'bg-gradient-to-br from-blue-500 to-blue-600'
-                  : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
-              } flex items-center justify-center shadow-lg`}
-            >
-              <Sparkles className='w-6 h-6 text-white' />
-            </div>
-            <span className='text-2xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent'>
-              BizAssist
-            </span>
-          </div>
-
-          <div className='flex items-center gap-4'>
-            <a
-              href='/'
-              className={`${
-                isDark
-                  ? 'text-gray-300 hover:text-white'
-                  : 'text-gray-600 hover:text-gray-900'
-              } transition-colors`}
-            >
-              Home
-            </a>
-            <button
-              onClick={handleLogout}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
-                isDark
-                  ? 'bg-gray-800 hover:bg-gray-700 text-gray-200'
-                  : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 shadow-sm'
-              }`}
-            >
-              <svg
-                className='w-4 h-4'
-                fill='none'
-                viewBox='0 0 24 24'
-                stroke='currentColor'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1'
-                />
-              </svg>
-              <span>Log Out</span>
-            </button>
-            <button
-              onClick={() => setTheme(isDark ? 'light' : 'dark')}
-              className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
-                isDark
-                  ? 'bg-gray-800 hover:bg-gray-700'
-                  : 'bg-white hover:bg-gray-100 border border-gray-300 shadow-sm'
-              }`}
-            >
-              {isDark ? (
-                <Sun className='w-5 h-5' />
-              ) : (
-                <Moon className='w-5 h-5' />
-              )}
-            </button>
-          </div>
-        </div>
-      </nav>
+      <Navbar
+        theme={theme}
+        onThemeChange={(newTheme: 'dark' | 'light') => setTheme(newTheme)}
+        showHomeLink={true}
+        showMyPitchesLink={false}
+        showLogout={true}
+      />
 
       {/* Main Content */}
       <main className='max-w-7xl mx-auto px-6 lg:px-12 py-12'>
@@ -415,29 +394,111 @@ const IdeaRankerPage = () => {
                 </svg>
                 <h3 className='text-xl font-bold'>Next Steps</h3>
               </div>
-              <ul className='space-y-4'>
-                {rankerData?.nextSteps?.map((step, idx) => (
-                  <li key={idx} className='flex items-start gap-3'>
-                    <div
-                      className={`mt-1 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        isDark ? 'bg-blue-600' : 'bg-emerald-600'
-                      } text-white text-sm font-bold`}
-                    >
-                      {idx + 1}
-                    </div>
-                    <p
-                      className={`text-sm leading-relaxed ${
-                        isDark ? 'text-gray-300' : 'text-gray-700'
-                      }`}
-                    >
-                      {step.text}
-                    </p>
-                  </li>
-                ))}
-              </ul>
+              {rankerData?.nextSteps && rankerData.nextSteps.length > 0 ? (
+                <ul className='space-y-4'>
+                  {rankerData.nextSteps.map((step, idx) => (
+                    <li key={idx} className='flex items-start gap-3'>
+                      <div
+                        className={`mt-1 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          isDark ? 'bg-blue-600' : 'bg-emerald-600'
+                        } text-white text-sm font-bold`}
+                      >
+                        {idx + 1}
+                      </div>
+                      <p
+                        className={`text-sm leading-relaxed ${
+                          isDark ? 'text-gray-300' : 'text-gray-700'
+                        }`}
+                      >
+                        {step.text}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p
+                  className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
+                >
+                  Next steps will be generated based on your business analysis...
+                </p>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Top Competitors */}
+        {competitors && competitors.competitors && competitors.competitors.length > 0 && (
+          <div
+            className={`rounded-2xl border ${
+              isDark
+                ? 'bg-gray-800/50 border-gray-700'
+                : 'bg-white border-gray-200'
+            } shadow-xl overflow-hidden mb-12`}
+          >
+            <div className={`p-8 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+              <h2 className='text-2xl font-bold mb-2'>Top Competitors</h2>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Key players in your market space
+              </p>
+            </div>
+            <div className='p-8'>
+              {isLoadingCompetitors ? (
+                <div className='flex items-center justify-center py-12'>
+                  <Loader2
+                    className={`w-8 h-8 animate-spin ${
+                      isDark ? 'text-blue-500' : 'text-emerald-500'
+                    }`}
+                  />
+                </div>
+              ) : (
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+                  {competitors.competitors.map((competitor, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-6 rounded-xl border ${
+                        isDark
+                          ? 'bg-gray-900/50 border-gray-700 hover:bg-gray-900'
+                          : 'bg-gray-50 border-gray-200 hover:bg-white'
+                      } transition-all`}
+                    >
+                      <div className='flex items-start justify-between mb-3'>
+                        <h3
+                          className={`text-lg font-bold ${
+                            isDark ? 'text-white' : 'text-gray-900'
+                          }`}
+                        >
+                          {competitor.title}
+                        </h3>
+                        {competitor.website && competitor.website !== '#' && (
+                          <a
+                            href={competitor.website}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              isDark
+                                ? 'hover:bg-gray-700 text-gray-400 hover:text-white'
+                                : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900'
+                            }`}
+                            aria-label={`Visit ${competitor.title} website`}
+                          >
+                            <ExternalLink className='w-4 h-4' />
+                          </a>
+                        )}
+                      </div>
+                      <p
+                        className={`text-sm leading-relaxed ${
+                          isDark ? 'text-gray-300' : 'text-gray-600'
+                        }`}
+                      >
+                        {competitor.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Score Breakdown */}
         <div
@@ -447,19 +508,21 @@ const IdeaRankerPage = () => {
               : 'bg-white border-gray-200'
           } shadow-xl overflow-hidden`}
         >
-          <div className="p-8 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}">
+          <div className={`p-8 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
             <h2 className='text-2xl font-bold'>Detailed Score Breakdown</h2>
           </div>
           <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 p-8'>
             {rankerData &&
               Object.entries(rankerData.scores).map(([key, value], idx) => {
-                const labels = {
+                const labels: Record<string, string> = {
                   novelty: 'Novelty',
                   localCapability: 'Local Capability',
                   feasibility: 'Feasibility',
                   sustainability: 'Sustainability',
                   globalDemand: 'Global Demand',
                 }
+
+                const scoreValue = value as { score: number; justification: string }
 
                 return (
                   <div
@@ -474,7 +537,7 @@ const IdeaRankerPage = () => {
                           isDark ? 'text-gray-400' : 'text-gray-600'
                         }`}
                       >
-                        {labels[key]}
+                        {labels[key] || key}
                       </p>
                       <span
                         className={`px-3 py-1 rounded-full text-sm font-bold ${
@@ -483,7 +546,7 @@ const IdeaRankerPage = () => {
                             : 'bg-emerald-100 text-emerald-700'
                         }`}
                       >
-                        {value.score}/100
+                        {scoreValue.score}/100
                       </span>
                     </div>
                     <p
@@ -491,7 +554,7 @@ const IdeaRankerPage = () => {
                         isDark ? 'text-gray-300' : 'text-gray-700'
                       }`}
                     >
-                      {value.justification}
+                      {scoreValue.justification}
                     </p>
                   </div>
                 )
