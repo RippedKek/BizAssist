@@ -9,7 +9,7 @@ class GeminiService {
   }
 
   async generateSummary(idea) {
-    const prompt = `As an experienced business analyst, provide a concise summary of the following business idea. Focus on the core value proposition, target market, and potential viability. Keep it clear and professional. The output should be no more than 100 words and in one paragraph. Do not include any additional commentary. Just start the summary, nothing else:
+    const prompt = `As an experienced business analyst, provide a concise summary of the following business idea with respect to Bangladesh market. Focus on the core value proposition, target market, and potential viability. Keep it clear and professional. The output should be no more than 100 words and in one paragraph. Do not include any additional commentary. Just start the summary, nothing else:
 
     Business Idea: ${idea}
 
@@ -21,7 +21,7 @@ class GeminiService {
   }
 
   async generateMarketInsights(summary) {
-    const prompt = `You are a senior international go-to-market strategist. Using the provided business concept summary, produce a structured analysis that will help an entrepreneur evaluate global expansion potential.
+    const prompt = `You are a senior international go-to-market strategist. Using the provided business concept summary in Bangladesh market, produce a structured analysis that will help an entrepreneur evaluate global expansion potential.
 
     Business Summary: ${summary}
 
