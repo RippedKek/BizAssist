@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Sparkles, Copy, Download, ChevronDown, Check, Wand2, X, Clock, FileText } from 'lucide-react'
+import { Sparkles, Copy, Download, ChevronDown, Check, Wand2, X, Clock, FileText, Info } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
 
 interface PitchSection {
@@ -39,6 +39,7 @@ const PitchGeneratorPage = () => {
   const [loadingNames, setLoadingNames] = useState(false)
   const [selectedSections, setSelectedSections] = useState<string[]>(['problem', 'solution', 'market', 'ask'])
   const [timeLimit, setTimeLimit] = useState(5)
+  const [additionalInfo, setAdditionalInfo] = useState('')
   const [pitchSpeech, setPitchSpeech] = useState<PitchSpeechData | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -128,6 +129,7 @@ const PitchGeneratorPage = () => {
           businessTitle,
           selectedSections,
           timeLimit,
+          ...(additionalInfo.trim() && { additionalInfo: additionalInfo.trim() }),
         }),
       })
 
@@ -383,6 +385,30 @@ const PitchGeneratorPage = () => {
               </div>
               <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                 Recommended: 3-5 minutes for elevator pitch, 5-10 minutes for detailed presentation
+              </p>
+            </div>
+
+            {/* Additional Information */}
+            <div className={`p-6 rounded-2xl border shadow-xl ${isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <label className='block text-lg font-bold mb-4 flex items-center gap-2'>
+                <Info className='w-5 h-5' />
+                Additional Guidance (Optional)
+              </label>
+              <textarea
+                value={additionalInfo}
+                onChange={(e) => setAdditionalInfo(e.target.value)}
+                placeholder='E.g., "Presenting at TechCrunch Disrupt", "Judges are VC investors focused on SaaS", "Emphasize scalability and market size", "Target audience is startup founders"...'
+                rows={4}
+                className={`w-full px-4 py-3 rounded-lg border resize-none ${
+                  isDark
+                    ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-blue-500'
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-emerald-500'
+                } focus:outline-none focus:ring-2 ${
+                  isDark ? 'focus:ring-blue-500/20' : 'focus:ring-emerald-500/20'
+                }`}
+              />
+              <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Provide context about where you'll present, who your audience is, or what aspects to emphasize. This helps AI tailor your pitch perfectly.
               </p>
             </div>
 

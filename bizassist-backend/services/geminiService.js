@@ -231,14 +231,20 @@ class GeminiService {
     }
   }
 
-  async generatePitchSpeech(summary, businessTitle, selectedSections, timeLimit) {
+  async generatePitchSpeech(summary, businessTitle, selectedSections, timeLimit, additionalInfo = '') {
     const sections = selectedSections.join(', ')
+    let additionalGuidanceText = ''
+    
+    if (additionalInfo && additionalInfo.trim()) {
+      additionalGuidanceText = `\n\nAdditional Guidance and Context:\n${additionalInfo}\n\nPlease tailor the pitch speech based on the above guidance. Consider the presentation venue, audience, judges, or specific focus areas mentioned.`
+    }
+    
     const prompt = `You are a professional pitch coach and presentation expert. Generate a complete pitch speech for a business idea with precise timing information for each section.
 
     Business Summary: ${summary}
     Business Title: ${businessTitle}
     Selected Sections: ${sections}
-    Total Time Limit: ${timeLimit} minutes
+    Total Time Limit: ${timeLimit} minutes${additionalGuidanceText}
 
     Respond with a single JSON object that strictly matches the following TypeScript interface:
 
@@ -263,7 +269,7 @@ class GeminiService {
     - Make the speech conversational and engaging, suitable for investor presentations
     - Focus on Bangladesh market context
     - Ensure the speech flows naturally between sections
-    - Total time should be close to but not exceed ${timeLimit} minutes
+    - Total time should be close to but not exceed ${timeLimit} minutes${additionalInfo && additionalInfo.trim() ? '\n- Incorporate the additional guidance provided above into the pitch speech content and tone' : ''}
 
     Return ONLY valid JSON, without any backticks, code fences, or commentary.`
 

@@ -133,7 +133,7 @@ class IdeaController {
 
   async generatePitchSpeech(req, res) {
     try {
-      const { summary, businessTitle, selectedSections, timeLimit } = req.body
+      const { summary, businessTitle, selectedSections, timeLimit, additionalInfo } = req.body
 
       if (!summary || !businessTitle || !selectedSections || !timeLimit) {
         return res.status(400).json({
@@ -153,7 +153,8 @@ class IdeaController {
         summary,
         businessTitle,
         selectedSections,
-        timeLimit
+        timeLimit,
+        additionalInfo
       )
 
       res.json({
