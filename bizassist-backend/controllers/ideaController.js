@@ -104,6 +104,70 @@ class IdeaController {
       })
     }
   }
+
+  async generateBusinessNames(req, res) {
+    try {
+      const { summary } = req.body
+
+      if (!summary) {
+        return res.status(400).json({
+          success: false,
+          error: 'No summary provided',
+        })
+      }
+
+      const namesData = await geminiService.generateBusinessNames(summary)
+
+      res.json({
+        success: true,
+        data: namesData,
+      })
+    } catch (error) {
+      console.error('Error generating business names:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate business names',
+      })
+    }
+  }
+
+  async generatePitchSpeech(req, res) {
+    try {
+      const { summary, businessTitle, selectedSections, timeLimit } = req.body
+
+      if (!summary || !businessTitle || !selectedSections || !timeLimit) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: summary, businessTitle, selectedSections, timeLimit',
+        })
+      }
+
+      if (!Array.isArray(selectedSections) || selectedSections.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'selectedSections must be a non-empty array',
+        })
+      }
+
+      const pitchData = await geminiService.generatePitchSpeech(
+        summary,
+        businessTitle,
+        selectedSections,
+        timeLimit
+      )
+
+      res.json({
+        success: true,
+        data: pitchData,
+      })
+    } catch (error) {
+      console.error('Error generating pitch speech:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate pitch speech',
+      })
+    }
+  }
 }
 
 module.exports = new IdeaController()
