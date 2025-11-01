@@ -24,8 +24,107 @@ type Competitor = {
   description: string
 }
 
+// Extract domain from URL for logo fetching
+const getDomainFromUrl = (url: string): string | null => {
+  if (!url || url === '#') return null
+  try {
+    const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`)
+    return urlObj.hostname.replace('www.', '')
+  } catch {
+    return null
+  }
+}
+
+// Get logo URL using Clearbit Logo API
+const getLogoUrl = (domain: string | null): string | null => {
+  if (!domain) return null
+  return `https://logo.clearbit.com/${domain}`
+}
+
 type CompetitorsData = {
   competitors: Competitor[]
+}
+
+// Competitor Card Component with logo
+const CompetitorCard = ({
+  competitor,
+  isDark,
+}: {
+  competitor: Competitor
+  isDark: boolean
+}) => {
+  const [logoError, setLogoError] = useState(false)
+  const domain = getDomainFromUrl(competitor.website)
+  const logoUrl = getLogoUrl(domain)
+
+  return (
+    <div
+      className={`p-6 rounded-xl border ${
+        isDark
+          ? 'bg-gray-900/50 border-gray-700 hover:bg-gray-900'
+          : 'bg-gray-50 border-gray-200 hover:bg-white'
+      } transition-all`}
+    >
+      <div className='flex items-start justify-between mb-3'>
+        <div className='flex items-center gap-3 flex-1'>
+          {logoUrl && !logoError ? (
+            <img
+              src={logoUrl}
+              alt={`${competitor.title} logo`}
+              className='w-10 h-10 rounded-lg object-contain bg-white p-1'
+              onError={() => setLogoError(true)}
+              onLoad={(e) => {
+                // Check if image loaded successfully
+                const img = e.target as HTMLImageElement
+                if (!img.complete || img.naturalHeight === 0) {
+                  setLogoError(true)
+                }
+              }}
+            />
+          ) : (
+            <div
+              className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm ${
+                isDark
+                  ? 'bg-gray-700 text-gray-300'
+                  : 'bg-gray-200 text-gray-600'
+              }`}
+            >
+              {competitor.title.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <h3
+            className={`text-lg font-bold ${
+              isDark ? 'text-white' : 'text-gray-900'
+            }`}
+          >
+            {competitor.title}
+          </h3>
+        </div>
+        {competitor.website && competitor.website !== '#' && (
+          <a
+            href={competitor.website}
+            target='_blank'
+            rel='noopener noreferrer'
+            className={`p-1.5 rounded-lg transition-colors ml-2 ${
+              isDark
+                ? 'hover:bg-gray-700 text-gray-400 hover:text-white'
+                : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900'
+            }`}
+            aria-label={`Visit ${competitor.title} website`}
+          >
+            <ExternalLink className='w-4 h-4' />
+          </a>
+        )}
+      </div>
+      <p
+        className={`text-sm leading-relaxed ${
+          isDark ? 'text-gray-300' : 'text-gray-600'
+        }`}
+      >
+        {competitor.description}
+      </p>
+    </div>
+  )
 }
 
 const IdeaRankerPage = () => {
@@ -453,46 +552,11 @@ const IdeaRankerPage = () => {
               ) : (
                 <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
                   {competitors.competitors.map((competitor, idx) => (
-                    <div
+                    <CompetitorCard
                       key={idx}
-                      className={`p-6 rounded-xl border ${
-                        isDark
-                          ? 'bg-gray-900/50 border-gray-700 hover:bg-gray-900'
-                          : 'bg-gray-50 border-gray-200 hover:bg-white'
-                      } transition-all`}
-                    >
-                      <div className='flex items-start justify-between mb-3'>
-                        <h3
-                          className={`text-lg font-bold ${
-                            isDark ? 'text-white' : 'text-gray-900'
-                          }`}
-                        >
-                          {competitor.title}
-                        </h3>
-                        {competitor.website && competitor.website !== '#' && (
-                          <a
-                            href={competitor.website}
-                            target='_blank'
-                            rel='noopener noreferrer'
-                            className={`p-1.5 rounded-lg transition-colors ${
-                              isDark
-                                ? 'hover:bg-gray-700 text-gray-400 hover:text-white'
-                                : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900'
-                            }`}
-                            aria-label={`Visit ${competitor.title} website`}
-                          >
-                            <ExternalLink className='w-4 h-4' />
-                          </a>
-                        )}
-                      </div>
-                      <p
-                        className={`text-sm leading-relaxed ${
-                          isDark ? 'text-gray-300' : 'text-gray-600'
-                        }`}
-                      >
-                        {competitor.description}
-                      </p>
-                    </div>
+                      competitor={competitor}
+                      isDark={isDark}
+                    />
                   ))}
                 </div>
               )}
