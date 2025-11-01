@@ -9,5 +9,6 @@ router.post('/idea-ranker', ideaController.generateIdeaRankerScore)
 router.post('/competitors', ideaController.generateCompetitors)
 router.post('/business-names', ideaController.generateBusinessNames)
 router.post('/pitch-speech', ideaController.generatePitchSpeech)
+router.post('/generate-slide', ideaController.generateSlide)
 
 module.exports = router

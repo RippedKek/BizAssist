@@ -169,6 +169,41 @@ class IdeaController {
       })
     }
   }
+
+  async generateSlide(req, res) {
+    try {
+      const { sectionName, sectionContent, businessTitle, summary, slideNumber, totalSlides } = req.body
+
+      if (!sectionName || !sectionContent || !businessTitle || !summary) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: sectionName, sectionContent, businessTitle, summary',
+        })
+      }
+
+      const slideCode = await geminiService.generateSlideCode(
+        sectionName,
+        sectionContent,
+        businessTitle,
+        summary,
+        slideNumber || 1,
+        totalSlides || 1
+      )
+
+      res.json({
+        success: true,
+        data: {
+          slideCode,
+        },
+      })
+    } catch (error) {
+      console.error('Error generating slide:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate slide code',
+      })
+    }
+  }
 }
 
 module.exports = new IdeaController()

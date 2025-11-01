@@ -285,6 +285,71 @@ class GeminiService {
       throw new Error('Invalid JSON returned from Gemini')
     }
   }
+
+  async generateSlideCode(sectionName, sectionContent, businessTitle, summary, slideNumber, totalSlides) {
+    const prompt = `You are a professional presentation designer. Generate PowerPoint slide code using pptxgenjs library for a pitch presentation.
+
+    Business Title: ${businessTitle}
+    Business Summary: ${summary}
+    Slide Section: ${sectionName}
+    Slide Content: ${sectionContent}
+    Slide Number: ${slideNumber} of ${totalSlides}
+
+    Generate ONLY the JavaScript code that uses pptxgenjs to create a single slide. The code should:
+    1. Be a function that takes 'pptx' as a parameter (which is a PptxGenJS instance)
+    2. Create a new slide using pptx.addSlide()
+    3. Add appropriate title, content, and information tables
+    4. Use professional design with good spacing and typography
+    5. Extract key points from the section content
+    6. Use bullet points for readability
+    7. Include the section name as the slide title
+    8. Make it visually appealing with appropriate colors, fonts, and layout
+    9. Slide contents should not be pasted 1:1 from the section content, but should be a summary of the section content
+    10. Add info tables if necessary
+    11. Slides should not be boring and must be engaging and interesting
+    12. Do not use any images, only use text and information tables
+
+    Example structure:
+    function(pptx) {
+      const slide = pptx.addSlide();
+      slide.addText('Title', { x: 0.5, y: 0.5, w: 9, h: 0.8, fontSize: 32, bold: true });
+      slide.addText('Content here', { x: 0.5, y: 1.5, w: 9, h: 4, fontSize: 18 });
+    }
+
+    Return ONLY the JavaScript code function body (the part inside the function), without function wrapper, without backticks, without code fences. Just the raw code that will be executed as: 
+    const slideFunction = new Function('pptx', 'YOUR_CODE_HERE');
+    slideFunction(pptx);
+
+    Make sure the code is clean, professional, and creates a visually appealing slide.`
+
+    const result = await this.model.generateContent(prompt)
+    const response = await result.response
+    const rawText = response.text().trim()
+    
+    // Remove code fences and extract just the code
+    let cleanedCode = rawText
+      .replace(/```javascript\n?/gi, '')
+      .replace(/```js\n?/gi, '')
+      .replace(/```\n?/gi, '')
+      .replace(/^function\s*\(pptx\)\s*\{/, '') // Remove function declaration start
+      .replace(/\}\s*$/, '') // Remove function declaration end
+      .trim()
+
+    // If it still has function wrapper, extract the body
+    if (cleanedCode.includes('const slide = pptx.addSlide()')) {
+      // Good, it's the function body
+    } else if (cleanedCode.includes('pptx.addSlide')) {
+      // It's already the function body
+    } else {
+      // Try to extract function body from various formats
+      const functionMatch = cleanedCode.match(/\{([\s\S]*)\}/)
+      if (functionMatch) {
+        cleanedCode = functionMatch[1].trim()
+      }
+    }
+
+    return cleanedCode
+  }
 }
 
 module.exports = new GeminiService()

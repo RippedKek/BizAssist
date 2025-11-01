@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Sparkles, Copy, Download, ChevronDown, Check, Wand2, X, Clock, FileText, Info } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Sparkles, Copy, Download, ChevronDown, Check, Wand2, X, Clock, FileText, Info, Presentation, ArrowRight } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
 
 interface PitchSection {
@@ -31,6 +32,7 @@ const availableSections = [
 ]
 
 const PitchGeneratorPage = () => {
+  const router = useRouter()
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [summary, setSummary] = useState('')
   const [showNameModal, setShowNameModal] = useState(false)
@@ -476,6 +478,42 @@ const PitchGeneratorPage = () => {
                         <FileText className='w-5 h-5' />
                       </button>
                     </div>
+                  </div>
+                  {/* Action Buttons */}
+                  <div className='flex gap-3 mt-4'>
+                    <button
+                      onClick={() => {
+                        const pitchData = {
+                          pitchSpeech,
+                          businessTitle,
+                          summary,
+                        }
+                        sessionStorage.setItem('bizassist-pitch-data', JSON.stringify(pitchData))
+                        router.push('/slide-generator')
+                      }}
+                      className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                        isDark
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white'
+                          : 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white'
+                      }`}
+                    >
+                      <Presentation className='w-5 h-5' />
+                      Generate Slides
+                    </button>
+                    <button
+                      onClick={() => {
+                        const ideaParam = encodeURIComponent(summary)
+                        router.push(`/visual-branding?idea=${ideaParam}`)
+                      }}
+                      className={`px-4 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                        isDark
+                          ? 'border border-gray-600 hover:bg-gray-800 text-gray-300'
+                          : 'border border-gray-300 hover:bg-gray-50 text-gray-700'
+                      }`}
+                    >
+                      Skip to Visual Branding
+                      <ArrowRight className='w-5 h-5' />
+                    </button>
                   </div>
                 </div>
 
