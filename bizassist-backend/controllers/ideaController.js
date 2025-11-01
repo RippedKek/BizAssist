@@ -52,6 +52,58 @@ class IdeaController {
       })
     }
   }
+
+  async generateIdeaRankerScore(req, res) {
+    try {
+      const { summary } = req.body
+
+      if (!summary) {
+        return res.status(400).json({
+          success: false,
+          error: 'No summary provided',
+        })
+      }
+
+      const rankerData = await geminiService.generateIdeaRankerScore(summary)
+
+      res.json({
+        success: true,
+        data: rankerData,
+      })
+    } catch (error) {
+      console.error('Error generating idea ranker score:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate idea ranker score',
+      })
+    }
+  }
+
+  async generateCompetitors(req, res) {
+    try {
+      const { summary } = req.body
+
+      if (!summary) {
+        return res.status(400).json({
+          success: false,
+          error: 'No summary provided',
+        })
+      }
+
+      const competitorsData = await geminiService.generateCompetitors(summary)
+
+      res.json({
+        success: true,
+        data: competitorsData,
+      })
+    } catch (error) {
+      console.error('Error generating competitors:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate competitors',
+      })
+    }
+  }
 }
 
 module.exports = new IdeaController()
