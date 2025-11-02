@@ -89,6 +89,10 @@ const PitchGeneratorPage = () => {
 
   const handleSelectName = (name: string) => {
     setBusinessTitle(name)
+    // Save businessTitle to sessionStorage immediately when selected
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('bizassist-business-title', name)
+    }
     setShowNameModal(false)
   }
 
@@ -276,7 +280,14 @@ const PitchGeneratorPage = () => {
                     <input
                       type='text'
                       value={businessTitle}
-                      onChange={(e) => setBusinessTitle(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setBusinessTitle(value)
+                        // Save businessTitle to sessionStorage as user types
+                        if (typeof window !== 'undefined' && value.trim()) {
+                          sessionStorage.setItem('bizassist-business-title', value)
+                        }
+                      }}
                       placeholder='Enter business name...'
                       className={`w-full px-4 py-3 rounded-lg border ${
                         isDark
@@ -483,6 +494,10 @@ const PitchGeneratorPage = () => {
                   <div className='flex gap-3 mt-4'>
                     <button
                       onClick={() => {
+                        // Save businessTitle to sessionStorage
+                        if (typeof window !== 'undefined' && businessTitle) {
+                          sessionStorage.setItem('bizassist-business-title', businessTitle)
+                        }
                         const pitchData = {
                           pitchSpeech,
                           businessTitle,
@@ -502,8 +517,22 @@ const PitchGeneratorPage = () => {
                     </button>
                     <button
                       onClick={() => {
-                        const ideaParam = encodeURIComponent(summary)
-                        router.push(`/visual-branding?idea=${ideaParam}`)
+                        // Save businessTitle to sessionStorage before navigating
+                        if (typeof window !== 'undefined' && businessTitle) {
+                          sessionStorage.setItem('bizassist-business-title', businessTitle)
+                          // Also save it in pitch-data for consistency
+                          try {
+                            const pitchData = {
+                              pitchSpeech,
+                              businessTitle,
+                              summary,
+                            }
+                            sessionStorage.setItem('bizassist-pitch-data', JSON.stringify(pitchData))
+                          } catch (error) {
+                            console.error('Error saving pitch data:', error)
+                          }
+                        }
+                        router.push(`/visual-branding`)
                       }}
                       className={`px-4 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
                         isDark

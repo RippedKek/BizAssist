@@ -14,12 +14,15 @@ import {
 } from 'lucide-react'
 import InputIdeaModal from '../../components/InputIdeaModal'
 import Navbar from '../components/layout/Navbar'
+import ProtectedRoute from '../components/auth/ProtectedRoute'
+
 const Homepage = () => {
   const [theme, setTheme] = useState('dark')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const isDark = theme === 'dark'
 
   return (
+    <ProtectedRoute>
     <div
       className={`min-h-screen ${
         isDark
@@ -33,11 +36,11 @@ const Homepage = () => {
         showHomeLink={false}
         showMyPitchesLink={false}
         showLogout={true}
-      />
+        />
 
-      <main>
-        {/* Hero Section */}
-        <section className='py-20 px-32 md:py-32'>
+        <main>
+          {/* Hero Section */}
+          <section className='py-20 px-32 md:py-32'>
           <div className='container mx-auto px-4'>
             <div className='grid grid-cols-1 gap-16 text-center lg:grid-cols-2 lg:gap-20 lg:text-left items-center'>
               <div className='flex flex-col items-center justify-center gap-8 lg:items-start'>
@@ -278,48 +281,49 @@ const Homepage = () => {
             </div>
           </div>
         </section>
-      </main>
+        </main>
 
-      {/* Footer */}
-      <footer
-        className={`py-12 border-t ${
-          isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-        }`}
-      >
-        <div className='container mx-auto px-4 text-center'>
-          <div className='flex items-center justify-center gap-3 mb-4'>
-            <div
-              className={`w-8 h-8 rounded-lg ${
-                isDark
-                  ? 'bg-gradient-to-br from-blue-500 to-blue-600'
-                  : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
-              } flex items-center justify-center`}
-            >
-              <Lightbulb className='w-5 h-5 text-white' />
+        {/* Footer */}
+        <footer
+          className={`py-12 border-t ${
+            isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+          }`}
+        >
+          <div className='container mx-auto px-4 text-center'>
+            <div className='flex items-center justify-center gap-3 mb-4'>
+              <div
+                className={`w-8 h-8 rounded-lg ${
+                  isDark
+                    ? 'bg-gradient-to-br from-blue-500 to-blue-600'
+                    : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
+                } flex items-center justify-center`}
+              >
+                <Lightbulb className='w-5 h-5 text-white' />
+              </div>
+              <span className='text-xl font-bold'>BizAssist</span>
             </div>
-            <span className='text-xl font-bold'>BizAssist</span>
+            <p
+              className={`text-sm mb-6 ${
+                isDark ? 'text-gray-400' : 'text-gray-600'
+              }`}
+            >
+              Empowering the next generation of Bangladeshi entrepreneurs
+            </p>
+            <p
+              className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}
+            >
+              © {new Date().getFullYear()} BizAssist by Team Ultron
+            </p>
           </div>
-          <p
-            className={`text-sm mb-6 ${
-              isDark ? 'text-gray-400' : 'text-gray-600'
-            }`}
-          >
-            Empowering the next generation of Bangladeshi entrepreneurs
-          </p>
-          <p
-            className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}
-          >
-            © {new Date().getFullYear()} BizAssist by Team Ultron
-          </p>
-        </div>
-      </footer>
+        </footer>
 
-      <InputIdeaModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        theme={theme}
-      />
-    </div>
+        <InputIdeaModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          theme={theme}
+        />
+      </div>
+    </ProtectedRoute>
   )
 }
 

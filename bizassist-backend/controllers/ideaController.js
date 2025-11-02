@@ -1,4 +1,5 @@
 const geminiService = require('../services/geminiService')
+const paletteService = require('../services/paletteService')
 
 class IdeaController {
   async generateSummary(req, res) {
@@ -201,6 +202,38 @@ class IdeaController {
       res.status(500).json({
         success: false,
         error: 'Failed to generate slide code',
+      })
+    }
+  }
+
+  async generatePalettes(req, res) {
+    try {
+      const { businessName, summary, logoColors } = req.body
+
+      if (!businessName || !summary) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: businessName, summary',
+        })
+      }
+
+      const palettes = await paletteService.generateColorPalettes(
+        businessName,
+        summary,
+        logoColors || []
+      )
+
+      res.json({
+        success: true,
+        data: {
+          palettes,
+        },
+      })
+    } catch (error) {
+      console.error('Error generating palettes:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate palettes',
       })
     }
   }
