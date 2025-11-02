@@ -12,6 +12,7 @@ interface Logo {
   style?: string;
   elements?: string[];
   colors?: string[];
+  image?: string; // Base64 or data URL of generated logo
 }
 
 interface Palette {
@@ -82,13 +83,60 @@ const VisualBrandingScreen = () => {
     }
   }, [businessName, summary, logos, selectedLogo]);
 
+  const generateLogo = async (businessName: string, summary: string, variation: number): Promise<string | null> => {
+    try {
+      const prompts = [
+        `Professional minimalist logo design for "${businessName}". Clean, modern, transparent background, business logo, corporate identity, simple icon, vector style`,
+        `Modern creative logo for "${businessName}". Geometric shapes, bold typography, transparent background, professional branding, contemporary design`
+      ];
+
+      const prompt = prompts[variation % prompts.length];
+
+      const apiKey = process.env.NEXT_PUBLIC_STABLE_API_KEY;
+      if (!apiKey) {
+        console.error('STABLE_API_KEY not found in environment variables');
+        return null;
+      }
+
+      const formData = new FormData();
+      formData.append('prompt', prompt);
+      formData.append('output_format', 'png');
+
+      const response = await fetch(
+        'https://api.stability.ai/v2beta/stable-image/generate/sd3',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            Accept: 'image/*',
+          },
+          body: formData,
+        }
+      );
+
+      if (response.status === 200) {
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        return imageUrl;
+      } else {
+        const errorText = await response.text();
+        console.error(`Stable Diffusion API error: ${response.status}`, errorText);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error generating logo:', error);
+      return null;
+    }
+  };
+
   const generateBranding = async (summaryText: string, name: string) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Generate static logos
-      const staticLogos: Logo[] = [
+      // Generate logos using Stable Diffusion API
+      const logoPromises = [];
+      const baseLogos: Logo[] = [
         { 
           id: 0, 
           color: '#5B5FEF', 
@@ -100,24 +148,26 @@ const VisualBrandingScreen = () => {
           color: '#10B981', 
           label: 'Emerald',
           colors: ['#10B981', '#F59E0B', '#6B7280', '#F9FAFB']
-        },
-        { 
-          id: 2, 
-          color: '#F59E0B', 
-          label: 'Amber',
-          colors: ['#F59E0B', '#DC2626', '#6B7280', '#F9FAFB']
-        },
-        { 
-          id: 3, 
-          color: '#6B7280', 
-          label: 'Gray',
-          colors: ['#6B7280', '#3B82F6', '#8B5CF6', '#F9FAFB']
         }
       ];
-      setLogos(staticLogos);
+
+      // Generate 2 logo variations
+      for (let i = 0; i < 2; i++) {
+        logoPromises.push(generateLogo(name, summaryText, i));
+      }
+
+      const logoImages = await Promise.all(logoPromises);
+
+      // Combine base logos with generated images
+      const logosWithImages: Logo[] = baseLogos.map((logo, index) => ({
+        ...logo,
+        image: logoImages[index] || undefined
+      }));
+
+      setLogos(logosWithImages);
       
       // Generate palettes with first logo colors - pass summaryText and name directly
-      await generatePalettes(staticLogos[0].colors || [], summaryText, name);
+      await generatePalettes(baseLogos[0].colors || [], summaryText, name);
     } catch (error) {
       console.error('Error generating branding:', error);
       setError('Failed to generate branding. Please try again.');
@@ -134,19 +184,19 @@ const VisualBrandingScreen = () => {
     if (!summaryToUse) {
       // Use fallback if no summary
       const fallbackPalettes = [
-        {
-          name: 'Corporate Indigo',
-          colors: ['#5B5FEF', '#10B981', '#F59E0B', '#F9FAFB']
-        },
-        {
-          name: 'Emerald & Gold',
-          colors: ['#059669', '#FBBF24', '#F3F4F6', '#1F2937']
-        },
-        {
-          name: 'Crimson & Slate',
-          colors: ['#DC2626', '#64748B', '#F1F5F9', '#1E293B']
-        }
-      ];
+    {
+      name: 'Corporate Indigo',
+      colors: ['#5B5FEF', '#10B981', '#F59E0B', '#F9FAFB']
+    },
+    {
+      name: 'Emerald & Gold',
+      colors: ['#059669', '#FBBF24', '#F3F4F6', '#1F2937']
+    },
+    {
+      name: 'Crimson & Slate',
+      colors: ['#DC2626', '#64748B', '#F1F5F9', '#1E293B']
+    }
+  ];
       setPalettes(fallbackPalettes);
       return;
     }
@@ -201,8 +251,37 @@ const VisualBrandingScreen = () => {
     if (!summary) return;
     setIsLoading(true);
     try {
+      // Regenerate logos and palettes
+      const logoPromises = [];
+      for (let i = 0; i < 2; i++) {
+        logoPromises.push(generateLogo(businessName || 'Your Business', summary, i));
+      }
+
+      const logoImages = await Promise.all(logoPromises);
+      const baseLogos: Logo[] = [
+        { 
+          id: 0, 
+          color: '#5B5FEF', 
+          label: 'Indigo',
+          colors: ['#5B5FEF', '#10B981', '#F59E0B', '#F9FAFB']
+        },
+        { 
+          id: 1, 
+          color: '#10B981', 
+          label: 'Emerald',
+          colors: ['#10B981', '#F59E0B', '#6B7280', '#F9FAFB']
+        }
+      ];
+
+      const logosWithImages: Logo[] = baseLogos.map((logo, index) => ({
+        ...logo,
+        image: logoImages[index] || undefined
+      }));
+
+      setLogos(logosWithImages);
+
       // Regenerate palettes
-      const logoColors = (logos[selectedLogo]?.colors || logos[0]?.colors || []) as string[];
+      const logoColors = (logosWithImages[selectedLogo]?.colors || logosWithImages[0]?.colors || []) as string[];
       await generatePalettes(logoColors, summary, businessName);
     } catch (error) {
       console.error('Error regenerating:', error);
@@ -277,9 +356,9 @@ const VisualBrandingScreen = () => {
               onClick={handleGenerateMore}
               disabled={isLoading}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-lg transition-colors font-semibold ${
-                isDark 
-                  ? 'bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/30' 
-                  : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+              isDark 
+                ? 'bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/30' 
+                : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
               } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isLoading ? (
@@ -289,8 +368,8 @@ const VisualBrandingScreen = () => {
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" />
-                  Generate More
+              <Sparkles className="w-4 h-4" />
+              Generate More
                 </>
               )}
             </button>
@@ -343,12 +422,20 @@ const VisualBrandingScreen = () => {
                       : ''
                   }`}
                 >
+                  {logo.image ? (
+                    <img
+                      src={logo.image}
+                      alt={`Logo ${idx + 1}`}
+                      className="w-full h-full object-contain aspect-square bg-transparent"
+                    />
+                  ) : (
                   <div
                     className="aspect-square flex items-center justify-center text-white text-6xl font-black"
                     style={{ backgroundColor: logo.color }}
                   >
-                    {businessName ? businessName.charAt(0).toUpperCase() : logo.label.charAt(0)}
+                      {businessName ? businessName.charAt(0).toUpperCase() : logo.label.charAt(0)}
                   </div>
+                  )}
                   <div className={`absolute inset-0 bg-black/60 flex items-center justify-center transition-opacity ${
                     selectedLogo === idx ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                   }`}>
@@ -416,6 +503,14 @@ const VisualBrandingScreen = () => {
                   className="rounded-xl p-6 flex flex-col justify-center aspect-video"
                   style={{ backgroundColor: currentPalette.colors[0] }}
                 >
+                  {logos[selectedLogo]?.image ? (
+                    <img
+                      src={logos[selectedLogo].image}
+                      alt="Business Logo"
+                      className="w-16 h-16 object-contain mb-4"
+                      style={{ backgroundColor: 'transparent' }}
+                    />
+                  ) : (
                   <div
                     className="w-16 h-16 rounded-full flex items-center justify-center text-4xl font-black mb-4"
                     style={{
@@ -423,8 +518,9 @@ const VisualBrandingScreen = () => {
                       color: currentPalette.colors[0]
                     }}
                   >
-                    B
+                      {businessName ? businessName.charAt(0).toUpperCase() : 'B'}
                   </div>
+                  )}
                   <h3 className="text-2xl font-bold text-white mb-2">{businessName || 'Business Pitch'}</h3>
                   <p className="text-white/80 text-sm">{summary ? summary.substring(0, 50) + '...' : 'Transforming ideas into reality.'}</p>
                 </div>
