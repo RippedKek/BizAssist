@@ -86,41 +86,28 @@ const VisualBrandingScreen = () => {
   const generateLogo = async (businessName: string, summary: string, variation: number): Promise<string | null> => {
     try {
       const prompts = [
-        `Professional minimalist logo design for "${businessName}". Clean, modern, transparent background, business logo, corporate identity, simple icon, vector style`,
-        `Modern creative logo for "${businessName}". Geometric shapes, bold typography, transparent background, professional branding, contemporary design`
+        `logo-of-${businessName.toLowerCase().replace(/\s+/g, '-')}-professional-minimalist-design-clean-modern-transparent-background`,
+        `logo-of-${businessName.toLowerCase().replace(/\s+/g, '-')}-modern-creative-geometric-shapes-bold-typography`,
+        `logo-of-${businessName.toLowerCase().replace(/\s+/g, '-')}-corporate-identity-simple-icon-vector-style`,
+        `logo-of-${businessName.toLowerCase().replace(/\s+/g, '-')}-contemporary-branding-professional-design`
       ];
 
       const prompt = prompts[variation % prompts.length];
+      // Use different seeds for each variation to get different results
+      const seeds = [41, 42, 43, 44];
+      const seed = seeds[variation % seeds.length];
 
-      const apiKey = process.env.NEXT_PUBLIC_STABLE_API_KEY;
-      if (!apiKey) {
-        console.error('STABLE_API_KEY not found in environment variables');
-        return null;
-      }
+      // Use Pollinations API
+      const apiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?height=1000&width=1000&seed=${seed}`;
 
-      const formData = new FormData();
-      formData.append('prompt', prompt);
-      formData.append('output_format', 'png');
+      const response = await fetch(apiUrl);
 
-      const response = await fetch(
-        'https://api.stability.ai/v2beta/stable-image/generate/sd3',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            Accept: 'image/*',
-          },
-          body: formData,
-        }
-      );
-
-      if (response.status === 200) {
+      if (response.ok) {
         const blob = await response.blob();
         const imageUrl = URL.createObjectURL(blob);
         return imageUrl;
       } else {
-        const errorText = await response.text();
-        console.error(`Stable Diffusion API error: ${response.status}`, errorText);
+        console.error(`Pollinations API error: ${response.status}`);
         return null;
       }
     } catch (error) {
@@ -134,7 +121,7 @@ const VisualBrandingScreen = () => {
     setError(null);
 
     try {
-      // Generate logos using Stable Diffusion API
+      // Generate logos using Pollinations API
       const logoPromises = [];
       const baseLogos: Logo[] = [
         { 
@@ -148,11 +135,23 @@ const VisualBrandingScreen = () => {
           color: '#10B981', 
           label: 'Emerald',
           colors: ['#10B981', '#F59E0B', '#6B7280', '#F9FAFB']
+        },
+        { 
+          id: 2, 
+          color: '#F59E0B', 
+          label: 'Amber',
+          colors: ['#F59E0B', '#EF4444', '#6366F1', '#F9FAFB']
+        },
+        { 
+          id: 3, 
+          color: '#EF4444', 
+          label: 'Red',
+          colors: ['#EF4444', '#8B5CF6', '#06B6D4', '#F9FAFB']
         }
       ];
 
-      // Generate 2 logo variations
-      for (let i = 0; i < 2; i++) {
+      // Generate 4 logo variations
+      for (let i = 0; i < 4; i++) {
         logoPromises.push(generateLogo(name, summaryText, i));
       }
 
@@ -253,7 +252,7 @@ const VisualBrandingScreen = () => {
     try {
       // Regenerate logos and palettes
       const logoPromises = [];
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < 4; i++) {
         logoPromises.push(generateLogo(businessName || 'Your Business', summary, i));
       }
 
@@ -270,6 +269,18 @@ const VisualBrandingScreen = () => {
           color: '#10B981', 
           label: 'Emerald',
           colors: ['#10B981', '#F59E0B', '#6B7280', '#F9FAFB']
+        },
+        { 
+          id: 2, 
+          color: '#F59E0B', 
+          label: 'Amber',
+          colors: ['#F59E0B', '#EF4444', '#6366F1', '#F9FAFB']
+        },
+        { 
+          id: 3, 
+          color: '#EF4444', 
+          label: 'Red',
+          colors: ['#EF4444', '#8B5CF6', '#06B6D4', '#F9FAFB']
         }
       ];
 
