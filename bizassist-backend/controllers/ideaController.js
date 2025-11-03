@@ -1,4 +1,5 @@
 const geminiService = require('../services/geminiService')
+const paletteService = require('../services/paletteService')
 
 class IdeaController {
   async generateSummary(req, res) {
@@ -133,7 +134,7 @@ class IdeaController {
 
   async generatePitchSpeech(req, res) {
     try {
-      const { summary, businessTitle, selectedSections, timeLimit } = req.body
+      const { summary, businessTitle, selectedSections, timeLimit, additionalInfo } = req.body
 
       if (!summary || !businessTitle || !selectedSections || !timeLimit) {
         return res.status(400).json({
@@ -153,7 +154,8 @@ class IdeaController {
         summary,
         businessTitle,
         selectedSections,
-        timeLimit
+        timeLimit,
+        additionalInfo
       )
 
       res.json({
@@ -165,6 +167,73 @@ class IdeaController {
       res.status(500).json({
         success: false,
         error: 'Failed to generate pitch speech',
+      })
+    }
+  }
+
+  async generateSlide(req, res) {
+    try {
+      const { sectionName, sectionContent, businessTitle, summary, slideNumber, totalSlides } = req.body
+
+      if (!sectionName || !sectionContent || !businessTitle || !summary) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: sectionName, sectionContent, businessTitle, summary',
+        })
+      }
+
+      const slideCode = await geminiService.generateSlideCode(
+        sectionName,
+        sectionContent,
+        businessTitle,
+        summary,
+        slideNumber || 1,
+        totalSlides || 1
+      )
+
+      res.json({
+        success: true,
+        data: {
+          slideCode,
+        },
+      })
+    } catch (error) {
+      console.error('Error generating slide:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate slide code',
+      })
+    }
+  }
+
+  async generatePalettes(req, res) {
+    try {
+      const { businessName, summary, logoColors } = req.body
+
+      if (!businessName || !summary) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: businessName, summary',
+        })
+      }
+
+      const palettes = await paletteService.generateColorPalettes(
+        businessName,
+        summary,
+        logoColors || []
+      )
+
+      res.json({
+        success: true,
+        data: {
+          palettes,
+        },
+      })
+    } catch (error) {
+      console.error('Error generating palettes:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate palettes',
       })
     }
   }

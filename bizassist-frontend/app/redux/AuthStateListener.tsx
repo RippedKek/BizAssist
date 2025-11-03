@@ -10,6 +10,8 @@ export function AuthStateListener({ children }: { children: React.ReactNode }) {
   const dispatch = useAppDispatch()
 
   useEffect(() => {
+    dispatch(setLoading(true))
+    
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         dispatch(
