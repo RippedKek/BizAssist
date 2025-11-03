@@ -370,6 +370,12 @@ const MarketDashboardPage = () => {
               )}
             </div>
 
+            {/* World Map */}
+            <div className={`p-8 rounded-2xl border shadow-xl ${isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <h3 className='text-2xl font-bold mb-6'>Global Market Map</h3>
+              <RealWorldMap theme={theme} markets={insights?.topMarkets || []} />
+            </div>
+
             {/* Global Demand Signals */}
             <div className={`p-8 rounded-2xl border shadow-xl ${isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'}`}>
               <h3 className='text-2xl font-bold mb-6'>Global Demand Signals</h3>

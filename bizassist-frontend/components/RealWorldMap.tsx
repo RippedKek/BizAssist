@@ -17,16 +17,147 @@ type Props = { theme: 'dark' | 'light'; markets: Market[] };
 
 const COORDS: Record<string, [number, number]> = {
   USA: [37.8, -96],
+  'United States': [37.8, -96],
   Germany: [51.0, 10.0],
   Singapore: [1.3521, 103.8198],
   Japan: [36.2048, 138.2529],
   Australia: [-25.0, 133.0],
+  UK: [54.0, -2.0],
+  'United Kingdom': [54.0, -2.0],
+  Canada: [56.0, -106.0],
+  France: [46.0, 2.0],
+  Italy: [41.9, 12.5],
+  Spain: [40.0, -4.0],
+  Netherlands: [52.1, 5.3],
+  Belgium: [50.5, 4.5],
+  Sweden: [60.1, 18.6],
+  Norway: [60.5, 8.5],
+  Denmark: [56.3, 9.5],
+  Finland: [61.9, 25.7],
+  Poland: [51.9, 19.1],
+  Austria: [47.5, 14.6],
+  Switzerland: [46.8, 8.2],
+  Ireland: [53.4, -8.2],
+  Portugal: [39.4, -8.2],
+  Greece: [39.1, 21.8],
+  Czechia: [49.8, 15.5],
+  Hungary: [47.2, 19.5],
+  Slovakia: [48.7, 19.7],
+  Slovenia: [46.1, 14.8],
+  Croatia: [45.1, 15.2],
+  Romania: [45.9, 24.9],
+  Bulgaria: [42.7, 25.5],
+  Estonia: [58.6, 25.0],
+  Latvia: [56.9, 24.6],
+  Lithuania: [55.2, 23.9],
+  Luxembourg: [49.6, 6.1],
+  Malta: [35.9, 14.4],
+  Cyprus: [35.1, 33.4],
+  Brazil: [-14.2, -51.9],
+  Mexico: [23.6, -102.6],
+  Argentina: [-38.4, -63.6],
+  Chile: [-35.7, -71.5],
+  Colombia: [4.6, -74.3],
+  Peru: [-9.2, -75.0],
+  Venezuela: [6.4, -66.6],
+  Ecuador: [-1.8, -78.2],
+  Bolivia: [-16.3, -63.6],
+  Paraguay: [-23.4, -58.4],
+  Uruguay: [-32.5, -55.8],
+  China: [35.9, 104.2],
+  India: [20.6, 78.9],
+  Indonesia: [-0.8, 113.9],
+  Malaysia: [4.2, 101.9],
+  Thailand: [15.9, 100.9],
+  Vietnam: [14.1, 108.3],
+  Philippines: [12.9, 121.8],
+  SouthKorea: [35.9, 127.8],
+  'South Korea': [35.9, 127.8],
+  Taiwan: [23.7, 121.0],
+  HongKong: [22.3, 114.2],
+  'Hong Kong': [22.3, 114.2],
+  NewZealand: [-40.9, 174.9],
+  'New Zealand': [-40.9, 174.9],
+  SouthAfrica: [-30.6, 22.9],
+  'South Africa': [-30.6, 22.9],
+  Nigeria: [9.1, 8.7],
+  Egypt: [26.1, 29.9],
+  Kenya: [-0.0, 37.9],
+  Morocco: [31.8, -5.5],
+  Tunisia: [33.9, 9.6],
+  Algeria: [28.0, 1.7],
+  Ghana: [7.9, -1.0],
+  IvoryCoast: [7.5, -5.5],
+  'Ivory Coast': [7.5, -5.5],
+  Senegal: [14.5, -14.5],
+  Mali: [17.6, -4.0],
+  BurkinaFaso: [12.2, -1.6],
+  'Burkina Faso': [12.2, -1.6],
+  Niger: [17.6, 8.1],
+  Chad: [15.5, 18.7],
+  Sudan: [12.9, 30.2],
+  Ethiopia: [9.1, 38.8],
+  Somalia: [5.2, 46.2],
+  Uganda: [1.4, 32.3],
+  Tanzania: [-6.4, 34.9],
+  Rwanda: [-1.9, 29.9],
+  Burundi: [-3.4, 29.9],
+  Mozambique: [-18.7, 35.5],
+  Zambia: [-13.1, 27.8],
+  Zimbabwe: [-19.0, 29.9],
+  Botswana: [-22.3, 24.7],
+  Namibia: [-22.0, 17.1],
+  Angola: [-11.2, 17.9],
+  Madagascar: [-18.8, 46.9],
+  Mauritius: [-20.3, 57.6],
+  Seychelles: [-4.7, 55.5],
+  Comoros: [-11.9, 43.3],
+  Djibouti: [11.8, 42.6],
+  Eritrea: [15.2, 39.8],
+  Guinea: [9.9, -9.7],
+  SierraLeone: [8.5, -11.8],
+  'Sierra Leone': [8.5, -11.8],
+  Liberia: [6.4, -9.4],
+  GuineaBissau: [11.8, -15.2],
+  'Guinea-Bissau': [11.8, -15.2],
+  Gambia: [13.4, -15.3],
+  'The Gambia': [13.4, -15.3],
+  CapeVerde: [16.0, -24.0],
+  'Cape Verde': [16.0, -24.0],
+  SaoTomeAndPrincipe: [0.2, 6.6],
+  'Sao Tome and Principe': [0.2, 6.6],
+  EquatorialGuinea: [1.7, 10.3],
+  'Equatorial Guinea': [1.7, 10.3],
+  Gabon: [-0.8, 11.6],
+  Cameroon: [7.4, 12.4],
+  CentralAfricanRepublic: [6.6, 20.9],
+  'Central African Republic': [6.6, 20.9],
+  Congo: [-0.2, 15.8],
+  'Republic of the Congo': [-0.2, 15.8],
+  'Democratic Republic of the Congo': [-4.0, 21.8],
+  'DRC': [-4.0, 21.8],
+  'Congo-Kinshasa': [-4.0, 21.8],
+  'Congo-Brazzaville': [-0.2, 15.8],
+  'Republic of Congo': [-0.2, 15.8],
+  'Congo Republic': [-0.2, 15.8],
+  'Congo (Brazzaville)': [-0.2, 15.8],
+  'Congo (Kinshasa)': [-4.0, 21.8],
+  'Democratic Republic of Congo': [-4.0, 21.8],
+  'DR Congo': [-4.0, 21.8],
+  'Zaire': [-4.0, 21.8],
 };
 
 const COUNTRY_NAME_ALIASES: Record<string, string> = {
   USA: 'United States of America',
+  'United States': 'United States of America',
   UK: 'United Kingdom',
+  'United Kingdom': 'United Kingdom',
   SouthKorea: 'Republic of Korea',
+  'South Korea': 'Republic of Korea',
+  Germany: 'Germany',
+  Singapore: 'Singapore',
+  Japan: 'Japan',
+  Australia: 'Australia',
 };
 
 function FitToPoints({ points }: { points: [number, number][] }) {
@@ -58,10 +189,12 @@ function HighlightCountries({
 
   const normalize = (s: string) => s.trim().toLowerCase();
   const selected = useMemo(
-    () =>
-      new Set(
-        countries.map((n) => COUNTRY_NAME_ALIASES[n] || n).map((n) => normalize(n))
-      ),
+    () => {
+      const mapped = countries.map((n) => COUNTRY_NAME_ALIASES[n] || n).map((n) => normalize(n));
+      console.log('HighlightCountries - countries:', countries);
+      console.log('HighlightCountries - mapped:', mapped);
+      return new Set(mapped);
+    },
     [countries]
   );
 
@@ -81,12 +214,13 @@ function HighlightCountries({
   const onEachFeature = (feature: any, layer: L.Layer) => {
     const f = layer as L.Path;
     const name = (feature?.properties?.ADMIN || feature?.properties?.name || '') as string;
-    const isTop = selected.has(name.trim().toLowerCase());
+    f.setStyle(style(feature));
+    const isTop = selected.has(normalize(name));
     if (isTop) {
       f.bindTooltip(`${name}`, {
         sticky: true,
         direction: 'top',
-        className: theme === 'dark' ? 'map-tooltip-dark' : 'map-tooltip-light', // NEW
+        className: theme === 'dark' ? 'map-tooltip-dark' : 'map-tooltip-light',
       });
       f.on('click', () => {
         const bounds = (f as any).getBounds?.();
