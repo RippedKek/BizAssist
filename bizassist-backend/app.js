@@ -4,6 +4,7 @@ const corsMiddleware = require('./middleware/cors')
 const errorHandler = require('./middleware/errorHandler')
 const ideaRoutes = require('./routes/ideaRoutes')
 const healthRoutes = require('./routes/healthRoutes')
+const pitchPracticeRoutes = require('./routes/pitchPracticeRoutes')
 
 const app = express()
 const PORT = process.env.PORT || 8000
@@ -15,6 +16,7 @@ app.use(corsMiddleware)
 // Routes
 app.use('/api/v1', ideaRoutes)
 app.use('/api/v1', healthRoutes)
+app.use('/api/v1/pitch-practice', pitchPracticeRoutes)
 
 // Error handling
 app.use(errorHandler)
