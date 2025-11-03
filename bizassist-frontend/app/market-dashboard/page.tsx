@@ -33,6 +33,14 @@ type Recommendation = {
   text: string
 }
 
+type Company = {
+  name: string
+  lat: number
+  lng: number
+  type: 'company' | 'office'
+  district?: string
+}
+
 type MarketInsights = {
   headline: string
   feasibilityScore: {
@@ -45,15 +53,65 @@ type MarketInsights = {
   globalHighlights: GlobalHighlight[]
   challenges: Challenge[]
   recommendations: Recommendation[]
+  region: string
+  companies: Company[]
 }
 
 const clampPercentage = (value: number) => {
   if (Number.isNaN(value)) return 0
   return Math.min(100, Math.max(0, value))
 }
-import dynamic from 'next/dynamic';
 
-const RealWorldMap = dynamic(() => import('@/components/RealWorldMap'), { ssr: false });
+import dynamic from 'next/dynamic'
+const RealWorldMap = dynamic(() => import('@/components/RealWorldMap'), { ssr: false })
+
+// ---- Official district names (current English spellings) ----
+// Source list uses current official names, e.g., Chattogram, Cumilla, Barishal, Jashore, Bogura. :contentReference[oaicite:1]{index=1}
+const BD_DISTRICTS = [
+  'Bagerhat','Bandarban','Barguna','Barishal','Bhola','Bogura','Brahmanbaria','Chandpur','Chapai Nawabganj',
+  'Chattogram',"Cox's Bazar",'Chuadanga','Cumilla','Dhaka','Dinajpur','Faridpur','Feni','Gaibandha','Gazipur',
+  'Gopalganj','Habiganj','Jamalpur','Jashore','Jhalokati','Jhenaidah','Joypurhat','Khagrachhari','Khulna',
+  'Kishoreganj','Kurigram','Kushtia','Lakshmipur','Lalmonirhat','Madaripur','Magura','Manikganj','Meherpur',
+  'Munshiganj','Mymensingh','Naogaon','Narail','Narayanganj','Narsingdi','Natore','Netrokona','Nilphamari',
+  'Noakhali','Pabna','Panchagarh','Patuakhali','Pirojpur','Rajbari','Rajshahi','Rangamati','Rangpur','Satkhira',
+  'Shariatpur','Sherpur','Sirajganj','Sunamganj','Sylhet','Tangail','Thakurgaon'
+]
+
+// Common alias → official (handles older spellings & punctuation)
+const DISTRICT_ALIASES: Record<string, string> = {
+  // 2018 renames (Govt. Gazette / press) :contentReference[oaicite:2]{index=2}
+  'chittagong': 'Chattogram',
+  'comilla': 'Cumilla',
+  'barisal': 'Barishal',
+  'jessore': 'Jashore',
+  'bogra': 'Bogura',
+  // punctuation/spacing variants
+  'coxs bazar': "Cox's Bazar",
+  'cox s bazar': "Cox's Bazar",
+}
+
+// Build a normalization map so we can canonicalize free-text names
+const BD_BY_NORMALIZED: Record<string, string> = BD_DISTRICTS.reduce((acc, d) => {
+  acc[
+    d.toLowerCase()
+      .replace(/['’\-.]/g, '')
+      .replace(/\s+/g, ' ')
+  ] = d
+  return acc
+}, {} as Record<string, string>)
+
+const normalizeLoose = (s: string) =>
+  s.toLowerCase().replace(/['’\-.]/g, '').replace(/\s+/g, ' ').trim()
+
+const canonicalDistrict = (maybeName?: string | null): string | null => {
+  if (!maybeName) return null
+  const loose = normalizeLoose(maybeName)
+  // alias first
+  if (DISTRICT_ALIASES[loose]) return DISTRICT_ALIASES[loose]
+  // exact normalized match to official list
+  if (BD_BY_NORMALIZED[loose]) return BD_BY_NORMALIZED[loose]
+  return null
+}
 
 const MarketDashboardPage = () => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
@@ -61,13 +119,13 @@ const MarketDashboardPage = () => {
   const [insights, setInsights] = useState<MarketInsights | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Dropdown states
   const [timeframe, setTimeframe] = useState('last-6-months')
   const [region, setRegion] = useState('international')
   const [showTimeframeDropdown, setShowTimeframeDropdown] = useState(false)
   const [showRegionDropdown, setShowRegionDropdown] = useState(false)
-  
+
   const isDark = theme === 'dark'
 
   const timeframeOptions = [
@@ -84,12 +142,9 @@ const MarketDashboardPage = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-
     try {
       const storedSummary = sessionStorage.getItem('bizassist-shared-summary')
-      if (storedSummary) {
-        setSummary(storedSummary)
-      }
+      if (storedSummary) setSummary(storedSummary)
     } catch (error) {
       console.error('Error retrieving summary:', error)
     }
@@ -105,10 +160,8 @@ const MarketDashboardPage = () => {
     setError(null)
 
     try {
-      // Build context string based on filters
       const timeframeText = timeframeOptions.find(t => t.value === timeframe)?.label || 'Last 6 Months'
       const regionText = region === 'bangladesh' ? 'Bangladesh' : 'International'
-      
       const contextualSummary = `${summary}. Business target is for ${regionText} and analysis required for ${timeframeText.toLowerCase()}.`
 
       const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/market-insights`
@@ -124,7 +177,6 @@ const MarketDashboardPage = () => {
       }
 
       const data = await response.json()
-
       if (!data?.success || !data?.insights) {
         throw new Error('Market insights response malformed')
       }
@@ -153,6 +205,31 @@ const MarketDashboardPage = () => {
   const scoreValue = clampPercentage(insights?.feasibilityScore?.value ?? 0)
   const scoreLabel = insights?.feasibilityScore?.label ?? 'Awaiting analysis'
   const scoreJustification = insights?.feasibilityScore?.justification ?? 'Provide your idea summary to generate a feasibility score.'
+
+  // ---- Pull "top districts" from AI (markets, highlights, and company tags) ----
+  const aiTopDistricts = React.useMemo(() => {
+    const out = new Set<string>()
+
+    // from companies[].district
+    for (const c of (insights?.companies || [])) {
+      const canon = canonicalDistrict(c.district || '')
+      if (canon) out.add(canon)
+    }
+
+    // from topMarkets names
+    for (const t of (insights?.topMarkets || [])) {
+      const canon = canonicalDistrict(t.name || '')
+      if (canon) out.add(canon)
+    }
+
+    // from globalHighlights regions
+    for (const g of (insights?.globalHighlights || [])) {
+      const canon = canonicalDistrict(g.region || '')
+      if (canon) out.add(canon)
+    }
+
+    return Array.from(out)
+  }, [insights])
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white' : 'bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900'}`}>
@@ -373,7 +450,13 @@ const MarketDashboardPage = () => {
             {/* World Map */}
             <div className={`p-8 rounded-2xl border shadow-xl ${isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'}`}>
               <h3 className='text-2xl font-bold mb-6'>Global Market Map</h3>
-              <RealWorldMap theme={theme} markets={insights?.topMarkets || []} />
+              <RealWorldMap
+                theme={theme}
+                markets={insights?.topMarkets || []}
+                region={region}                 // user's dropdown choice
+                companies={insights?.companies || []}
+                topDistricts={aiTopDistricts}   // <-- highlight these in Bangladesh mode
+              />
             </div>
 
             {/* Global Demand Signals */}
