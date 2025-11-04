@@ -13,6 +13,7 @@ import {
   Timestamp,
   updateDoc,
   where,
+  deleteDoc,
 } from 'firebase/firestore'
 
 export type PitchId = string
@@ -103,7 +104,9 @@ export async function upsertStep(
   })
 }
 
-export async function getPitchById(pitchId: PitchId): Promise<PitchDocument | null> {
+export async function getPitchById(
+  pitchId: PitchId
+): Promise<PitchDocument | null> {
   const ref = doc(db, PITCHES, pitchId)
   const snap = await getDoc(ref)
   if (!snap.exists()) return null
@@ -124,4 +127,7 @@ export async function getPitchesForUser(
   return snap.docs.map((d) => ({ id: d.id, data: d.data() as PitchDocument }))
 }
 
-
+export async function deletePitchById(pitchId: PitchId): Promise<void> {
+  const ref = doc(db, PITCHES, pitchId)
+  await deleteDoc(ref)
+}

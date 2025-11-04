@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import React, { useState } from "react";
+import React, { useState } from 'react'
 import {
   Sparkles,
   FileText,
@@ -16,625 +16,377 @@ import {
   ChevronDown,
   Sun,
   Moon,
-} from "lucide-react";
-import Navbar from "../components/layout/Navbar";
+  ArrowUpRight,
+  BarChart3,
+  Target,
+  Zap,
+} from 'lucide-react'
+import Navbar from '../components/layout/Navbar'
 
 /** Helpers for PDF building (shared by all download handlers) */
 async function getPdfBits() {
   const [{ jsPDF }, autoTableModule] = await Promise.all([
-    import("jspdf"),
-    import("jspdf-autotable"),
-  ]);
-  const autoTable = autoTableModule.default as (doc: any, opts: any) => any;
-  return { jsPDF, autoTable };
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ])
+  const autoTable = autoTableModule.default as (doc: any, opts: any) => any
+  return { jsPDF, autoTable }
 }
-const nowStr = () => new Date().toLocaleString();
+const nowStr = () => new Date().toLocaleString()
+
+// Using imported Navbar component from original code
 
 const PitchDetailsPage = () => {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [expanded, setExpanded] = useState({
-    market: true,
-    ranker: true,
-    pitch: true,
-    branding: true,
-    slides: true,
-  });
-  const [busy, setBusy] = useState<string | null>(null);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [busy, setBusy] = useState<string | null>(null)
 
-  const isDark = theme === "dark";
-
-  const t = (cls: string, alt: string) => (isDark ? cls : alt);
-
-  const toggle = (k: keyof typeof expanded) =>
-    setExpanded((p) => ({ ...p, [k]: !p[k] }));
-
-  /** ------------------------ DOWNLOADERS ------------------------ */
-  const addHeader = (
-    doc: any,
-    title: string,
-    primary: [number, number, number],
-    pageW: number
-  ) => {
-    doc.setFillColor(...primary);
-    doc.rect(0, 0, pageW, 48, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.setTextColor(255, 255, 255);
-    doc.text(title, 40, 30);
-    doc.setFontSize(10);
-    doc.text(`Generated: ${nowStr()}`, pageW - 40, 30, { align: "right" });
-  };
-
-  const addSectionTitle = (doc: any, label: string, y: number, pageW: number) => {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.setTextColor(35, 35, 35);
-    doc.text(label, 40, y);
-    y += 12;
-    doc.setDrawColor(210, 210, 210);
-    doc.line(40, y, pageW - 40, y);
-    return y + 16;
-  };
-
-  const addParagraph = (doc: any, text: string, y: number, pageW: number) => {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.setTextColor(70, 70, 70);
-    const lines = doc.splitTextToSize(text, pageW - 80);
-    lines.forEach((ln: string) => {
-      doc.text(ln, 40, y);
-      y += 14;
-    });
-    return y + 4;
-  };
+  const isDark = theme === 'dark'
 
   const handleDownloadAll = async () => {
-    if (busy) return;
-    setBusy("all");
+    if (busy) return
+    setBusy('all')
     try {
-      const { jsPDF, autoTable } = await getPdfBits();
-      const doc = new jsPDF({ unit: "pt", format: "a4" });
-      const pageW = doc.internal.pageSize.getWidth();
-      const pageH = doc.internal.pageSize.getHeight();
-      const primary: [number, number, number] = isDark ? [37, 99, 235] : [16, 185, 129];
+      const { jsPDF, autoTable } = await getPdfBits()
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+      const pageW = doc.internal.pageSize.getWidth()
+      const pageH = doc.internal.pageSize.getHeight()
+      const primary: [number, number, number] = isDark
+        ? [37, 99, 235]
+        : [16, 185, 129]
 
-      addHeader(doc, "Overall Pitch Report", primary, pageW);
-      let y = 48 + 40;
+      // Header
+      doc.setFillColor(...primary)
+      doc.rect(0, 0, pageW, 48, 'F')
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(18)
+      doc.setTextColor(255, 255, 255)
+      doc.text('Overall Pitch Report', 40, 30)
+      doc.setFontSize(10)
+      doc.text(`Generated: ${nowStr()}`, pageW - 40, 30, { align: 'right' })
 
-      // Pitch Overview
-      y = addSectionTitle(doc, "Pitch Overview", y, pageW);
-      y = addParagraph(
-        doc,
-        "Core business idea: Sustainable textile manufacturing using eco-friendly jute fibers. Target Audience: Socially conscious fashion brands in Europe.",
-        y,
-        pageW
-      );
+      let y = 48 + 40
 
-      // Market Analysis
-      y = addSectionTitle(doc, "Market Analysis", y, pageW);
-      y = addParagraph(
-        doc,
-        "Summary: Market size growing with EU sustainable mandates; target customers include boutique eco brands and private-label lines. Competition moderate; differentiation on supply transparency and fiber quality.",
-        y,
-        pageW
-      );
-
-      // IdeaRanker summary table (placeholder — detailed PDF available in its own section)
-      y = addSectionTitle(doc, "IdeaRanker™ Summary", y, pageW);
-      (autoTable as any)(doc, {
-        startY: y,
-        head: [["Metric", "Score", "Notes"]],
-        body: [
-          ["Novelty", "60", "Natural fiber + traceability"],
-          ["Local Capability", "75", "Bangladesh strength in jute"],
-          ["Feasibility", "80", "Proven supply & export lanes"],
-          ["Sustainability", "70", "Low-impact fiber"],
-          ["Global Demand", "90", "EU demand rising"],
-        ],
-        styles: { font: "helvetica", fontSize: 10, cellPadding: 6 },
-        headStyles: { fillColor: primary, textColor: 255 },
-        margin: { left: 40, right: 40 },
-      });
-      y = ((doc as any).lastAutoTable?.finalY ?? y) + 20;
-      if (y > pageH - 100) {
-        doc.addPage();
-        y = 40;
+      // Content sections
+      const addSection = (title: string, content: string) => {
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(14)
+        doc.setTextColor(35, 35, 35)
+        doc.text(title, 40, y)
+        y += 12
+        doc.setDrawColor(210, 210, 210)
+        doc.line(40, y, pageW - 40, y)
+        y += 16
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(11)
+        doc.setTextColor(70, 70, 70)
+        const lines = doc.splitTextToSize(content, pageW - 80)
+        lines.forEach((ln: string) => {
+          doc.text(ln, 40, y)
+          y += 14
+        })
+        y += 8
       }
 
-      // Structured Pitch
-      y = addSectionTitle(doc, "Structured Pitch", y, pageW);
-      y = addParagraph(
-        doc,
-        "Problem: Fashion brands need verifiably sustainable fibers with stable supply. Solution: EcoWeave delivers export-ready jute fabrics with digital traceability. Business Model: B2B fabric sales, premium for certified sustainability.",
-        y,
-        pageW
-      );
+      addSection(
+        'Pitch Overview',
+        'Core business idea: Sustainable textile manufacturing using eco-friendly jute fibers. Target Audience: Socially conscious fashion brands in Europe.'
+      )
+      addSection(
+        'Market Analysis',
+        'Summary: Market size growing with EU sustainable mandates; target customers include boutique eco brands and private-label lines.'
+      )
 
-      // Visual Branding
-      y = addSectionTitle(doc, "Visual Branding", y, pageW);
-      y = addParagraph(
-        doc,
-        "Brand direction: natural textures, teal + sand palette, clean geometric logomark referencing woven fibers.",
-        y,
-        pageW
-      );
-
-      // Slides
-      y = addSectionTitle(doc, "Slides", y, pageW);
-      y = addParagraph(doc, "Auto-generated deck: Problem • Solution • Market • Moat • Traction • GTM • Ask.", y, pageW);
-
-      // Footer numbering
-      const pages = doc.getNumberOfPages();
-      for (let i = 1; i <= pages; i++) {
-        doc.setPage(i);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(120, 120, 120);
-        doc.text(`Page ${i} of ${pages}`, pageW - 40, doc.internal.pageSize.getHeight() - 16, {
-          align: "right",
-        });
-      }
-      doc.save("overall-pitch-report.pdf");
+      doc.save('overall-pitch-report.pdf')
     } catch (e) {
-      console.error(e);
-      alert("Failed to generate overall report. Make sure jspdf & jspdf-autotable are installed.");
+      console.error(e)
+      alert(
+        'Failed to generate overall report. Make sure jspdf & jspdf-autotable are installed.'
+      )
     } finally {
-      setBusy(null);
+      setBusy(null)
     }
-  };
+  }
 
-  const handleDownloadMarket = async () => {
-    if (busy) return;
-    setBusy("market");
-    try {
-      const { jsPDF } = await getPdfBits();
-      const doc = new jsPDF({ unit: "pt", format: "a4" });
-      const pageW = doc.internal.pageSize.getWidth();
-      const primary: [number, number, number] = isDark ? [37, 99, 235] : [16, 185, 129];
-      addHeader(doc, "Market Analysis Report", primary, pageW);
-      let y = 48 + 40;
-      y = addSectionTitle(doc, "Market Analysis", y, pageW);
-      y = addParagraph(
-        doc,
-        "Detailed insights into market size, target audience, and competitive landscape. Use the Market Dashboard page to export the full visual map & tables.",
-        y,
-        pageW
-      );
-      doc.save("market-analysis.pdf");
-    } catch (e) {
-      console.error(e);
-      alert("Failed to export Market Analysis.");
-    } finally {
-      setBusy(null);
-    }
-  };
+  const stats = [
+    { label: 'Market Score', value: '85', icon: TrendingUp, color: 'blue' },
+    { label: 'Viability', value: '92', icon: Target, color: 'emerald' },
+    { label: 'Innovation', value: '78', icon: Zap, color: 'purple' },
+    { label: 'Scalability', value: '88', icon: BarChart3, color: 'amber' },
+  ]
 
-  const handleDownloadRanker = async () => {
-    if (busy) return;
-    setBusy("ranker");
-    try {
-      const { jsPDF } = await getPdfBits();
-      const doc = new jsPDF({ unit: "pt", format: "a4" });
-      const pageW = doc.internal.pageSize.getWidth();
-      const primary: [number, number, number] = isDark ? [37, 99, 235] : [16, 185, 129];
-      addHeader(doc, "IdeaRanker™ Report", primary, pageW);
-      let y = 48 + 40;
-      y = addSectionTitle(doc, "Summary", y, pageW);
-      y = addParagraph(
-        doc,
-        "Scores & justifications for Novelty, Local Capability, Feasibility, Sustainability, and Global Demand. For the full radar chart and rich table, use the IdeaRanker page export.",
-        y,
-        pageW
-      );
-      doc.save("idearanker-report.pdf");
-    } catch (e) {
-      console.error(e);
-      alert("Failed to export IdeaRanker report.");
-    } finally {
-      setBusy(null);
-    }
-  };
+  const sections = [
+    {
+      id: 'market',
+      title: 'Market Analysis',
+      icon: TrendingUp,
+      description:
+        'Comprehensive market insights, competitive landscape, and target audience analysis',
+      color: 'blue',
+    },
+    {
+      id: 'ranker',
+      title: 'IdeaRanker™ Score',
+      icon: Award,
+      description: 'AI-powered viability assessment across 5 key dimensions',
+      color: 'emerald',
+    },
+    {
+      id: 'pitch',
+      title: 'Structured Pitch',
+      icon: Layers,
+      description:
+        'Complete pitch narrative with problem, solution, and business model',
+      color: 'purple',
+    },
+    {
+      id: 'branding',
+      title: 'Visual Branding',
+      icon: Palette,
+      description:
+        'Logo concepts, color palettes, and brand identity guidelines',
+      color: 'amber',
+    },
+    {
+      id: 'slides',
+      title: 'Pitch Deck',
+      icon: Presentation,
+      description: 'Professional presentation slides ready for investors',
+      color: 'rose',
+    },
+  ]
 
-  const handleDownloadPitch = async () => {
-    if (busy) return;
-    setBusy("pitch");
-    try {
-      const { jsPDF } = await getPdfBits();
-      const doc = new jsPDF({ unit: "pt", format: "a4" });
-      const pageW = doc.internal.pageSize.getWidth();
-      const primary: [number, number, number] = isDark ? [37, 99, 235] : [16, 185, 129];
-      addHeader(doc, "Structured Pitch", primary, pageW);
-      let y = 48 + 40;
-      y = addSectionTitle(doc, "Pitch", y, pageW);
-      y = addParagraph(
-        doc,
-        "Problem • Solution • Market • Business Model • GTM • Financials • Team • Ask. Replace with your generated pitch text blocks.",
-        y,
-        pageW
-      );
-      doc.save("structured-pitch.pdf");
-    } catch (e) {
-      console.error(e);
-      alert("Failed to export Structured Pitch.");
-    } finally {
-      setBusy(null);
-    }
-  };
+  const colorMap: any = {
+    blue: isDark
+      ? 'from-blue-500/20 to-blue-600/20 border-blue-500/30'
+      : 'from-blue-50 to-blue-100 border-blue-200',
+    emerald: isDark
+      ? 'from-emerald-500/20 to-emerald-600/20 border-emerald-500/30'
+      : 'from-emerald-50 to-emerald-100 border-emerald-200',
+    purple: isDark
+      ? 'from-purple-500/20 to-purple-600/20 border-purple-500/30'
+      : 'from-purple-50 to-purple-100 border-purple-200',
+    amber: isDark
+      ? 'from-amber-500/20 to-amber-600/20 border-amber-500/30'
+      : 'from-amber-50 to-amber-100 border-amber-200',
+    rose: isDark
+      ? 'from-rose-500/20 to-rose-600/20 border-rose-500/30'
+      : 'from-rose-50 to-rose-100 border-rose-200',
+  }
 
-  const handleDownloadBranding = async () => {
-    if (busy) return;
-    setBusy("branding");
-    try {
-      const { jsPDF } = await getPdfBits();
-      const doc = new jsPDF({ unit: "pt", format: "a4" });
-      const pageW = doc.internal.pageSize.getWidth();
-      const primary: [number, number, number] = isDark ? [37, 99, 235] : [16, 185, 129];
-      addHeader(doc, "Visual Branding", primary, pageW);
-      let y = 48 + 40;
-      y = addSectionTitle(doc, "Brand Direction", y, pageW);
-      y = addParagraph(
-        doc,
-        "Logo concepts, color palette, and typography. Export high-res assets from your branding workspace.",
-        y,
-        pageW
-      );
-      doc.save("visual-branding.pdf");
-    } catch (e) {
-      console.error(e);
-      alert("Failed to export Branding.");
-    } finally {
-      setBusy(null);
-    }
-  };
+  const iconColorMap: any = {
+    blue: 'text-blue-500',
+    emerald: 'text-emerald-500',
+    purple: 'text-purple-500',
+    amber: 'text-amber-500',
+    rose: 'text-rose-500',
+  }
 
-  const handleDownloadSlides = async () => {
-    if (busy) return;
-    setBusy("slides");
-    try {
-      const { jsPDF } = await getPdfBits();
-      const doc = new jsPDF({ unit: "pt", format: "a4" });
-      const pageW = doc.internal.pageSize.getWidth();
-      const primary: [number, number, number] = isDark ? [37, 99, 235] : [16, 185, 129];
-      addHeader(doc, "Slide Deck (Summary)", primary, pageW);
-      let y = 48 + 40;
-      y = addSectionTitle(doc, "Deck Outline", y, pageW);
-      y = addParagraph(
-        doc,
-        "Problem → Solution → Market → Product → Business Model → GTM → Traction → Roadmap → Financials → Ask.",
-        y,
-        pageW
-      );
-      doc.save("slides-summary.pdf");
-    } catch (e) {
-      console.error(e);
-      alert("Failed to export Slides.");
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  /** ----------------------------- UI ----------------------------- */
   return (
-    <div
-      className={`min-h-screen ${
-        isDark
-          ? "bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white"
-          : "bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900"
-      }`}
-    >
+    <div className={`min-h-screen ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
       <Navbar
         theme={theme}
-        onThemeChange={(newTheme) => setTheme(newTheme)}
+        onThemeChange={(newTheme: string) =>
+          setTheme(newTheme as 'dark' | 'light')
+        }
         showHomeLink
         showMyPitchesLink
         showLogout
       />
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Breadcrumbs + Title Row */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-          <div>
-            <div className="flex flex-wrap gap-2 mb-3">
-              <a
-                href="#"
-                className="text-gray-400 text-sm font-medium hover:underline"
-              >
-                My Pitches
-              </a>
-              <span className="text-gray-400 text-sm font-medium">/</span>
-              <span className={t("text-white", "text-gray-900") + " text-sm font-medium"}>
-                EcoWeave Textiles Pitch
-              </span>
-            </div>
-            <h1 className={t("text-white", "text-gray-900") + " text-4xl font-black"}>
-              EcoWeave Textiles Pitch
-            </h1>
-            <p className="text-gray-400 text-base">
-              A comprehensive overview of your generated business pitch assets.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-
-            <button
-              onClick={handleDownloadAll}
-              disabled={busy === "all"}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-colors ${
-                isDark
-                  ? "bg-gray-800 hover:bg-gray-700 text-white"
-                  : "bg-white hover:bg-gray-100 text-gray-900 border border-gray-300"
-              } disabled:opacity-60`}
-              aria-label="Download overall report"
+      <main className='max-w-7xl mx-auto px-6 py-12'>
+        {/* Hero Section */}
+        <div className='mb-12'>
+          <div className='flex items-center gap-2 mb-4'>
+            <a
+              href='#'
+              className='text-sm text-gray-500 hover:text-gray-400 transition-colors'
             >
-              <Download className="w-4 h-4" />
-              Download All Assets
-            </button>
+              My Pitches
+            </a>
+            <span className='text-gray-600'>/</span>
+            <span
+              className={`text-sm font-medium ${
+                isDark ? 'text-white' : 'text-gray-900'
+              }`}
+            >
+              EcoWeave Textiles
+            </span>
+          </div>
+
+          <div className='flex flex-col lg:flex-row items-start justify-between gap-8 mb-8'>
+            <div className='flex-1'>
+              <h1
+                className={`text-5xl font-black mb-4 ${
+                  isDark ? 'text-white' : 'text-gray-900'
+                }`}
+              >
+                EcoWeave Textiles
+              </h1>
+              <p className='text-xl text-gray-400 mb-6 max-w-2xl'>
+                Sustainable textile manufacturing using eco-friendly jute fibers
+                for socially conscious fashion brands in Europe
+              </p>
+              <div className='flex flex-wrap gap-3'>
+                <button
+                  onClick={handleDownloadAll}
+                  disabled={busy === 'all'}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all ${
+                    isDark
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-lg shadow-blue-500/30'
+                      : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-lg shadow-blue-500/30'
+                  } disabled:opacity-60 disabled:cursor-not-allowed`}
+                >
+                  <Download className='w-4 h-4' />
+                  Export All Assets
+                </button>
+                <button
+                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all ${
+                    isDark
+                      ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-700'
+                      : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 shadow-sm'
+                  }`}
+                >
+                  <FileText className='w-4 h-4' />
+                  Share Pitch
+                </button>
+                <button
+                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all ${
+                    isDark
+                      ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-700'
+                      : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 shadow-sm'
+                  }`}
+                >
+                  <Settings className='w-4 h-4' />
+                  Settings
+                </button>
+              </div>
+            </div>
+
+            <div className='w-full lg:w-96 h-64 rounded-2xl overflow-hidden shadow-2xl border border-white/10'>
+              <img
+                src='https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=800'
+                alt='Business concept'
+                className='w-full h-full object-cover'
+              />
+            </div>
           </div>
         </div>
 
-        {/* Pitch Overview Card */}
-        <div
-          className={`p-6 rounded-xl mb-8 ${
-            isDark ? "bg-gray-800" : "bg-white border border-gray-200"
-          }`}
-        >
-          <div className="flex flex-col md:flex-row items-start justify-between gap-6">
-            <div className="flex flex-col gap-2 flex-1">
-              <p className={t("text-white", "text-gray-900") + " text-xl font-bold"}>
-                Pitch Overview
-              </p>
-              <p className="text-gray-400 text-sm">
-                Core business idea: Sustainable textile manufacturing using eco-friendly
-                jute fibers. Target Audience: Socially conscious fashion brands in
-                Europe.
-              </p>
-            </div>
+        {/* Stats Grid */}
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12'>
+          {stats.map((stat, i) => (
             <div
-              className="w-full md:w-64 h-40 rounded-lg bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "url('https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=400')",
-              }}
-            />
-          </div>
+              key={i}
+              className={`relative overflow-hidden rounded-2xl p-6 border ${
+                isDark
+                  ? 'bg-gray-900 border-gray-800'
+                  : 'bg-white border-gray-200 shadow-sm'
+              }`}
+            >
+              <div className='flex items-start justify-between mb-4'>
+                <div
+                  className={`p-3 rounded-xl ${
+                    isDark ? 'bg-gray-800' : 'bg-gray-50'
+                  }`}
+                >
+                  <stat.icon
+                    className={`w-5 h-5 ${iconColorMap[stat.color]}`}
+                  />
+                </div>
+              </div>
+              <div
+                className={`text-3xl font-black mb-1 ${
+                  isDark ? 'text-white' : 'text-gray-900'
+                }`}
+              >
+                {stat.value}
+              </div>
+              <div className='text-sm text-gray-500'>{stat.label}</div>
+            </div>
+          ))}
         </div>
 
-        {/* Sections (each with its own download button) */}
-        <div className="flex flex-col gap-3">
-          {/* Market Analysis */}
-          <div
-            className={`rounded-lg ${
-              isDark ? "bg-gray-800" : "bg-white border border-gray-200"
-            }`}
-          >
-            <div className="w-full flex items-center justify-between px-6 py-4">
-              <div className="flex items-center gap-3">
-                <TrendingUp className="w-5 h-5 text-blue-500" />
-                <p className={t("text-white", "text-gray-900") + " text-base font-medium"}>
-                  Market Analysis
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleDownloadMarket}
-                  className="p-2 rounded-md hover:bg-black/10"
-                  title="Download Market report"
-                  aria-label="Download Market report"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => toggle("market")}
-                  className="p-2 rounded-md hover:bg-black/10"
-                  aria-label="Toggle section"
-                >
-                  <ChevronDown
-                    className={`w-5 h-5 transition-transform ${
-                      expanded.market ? "rotate-180" : ""
+        {/* Section Cards */}
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+          {sections.map((section) => (
+            <div
+              key={section.id}
+              className={`group relative overflow-hidden rounded-2xl p-8 border transition-all hover:scale-[1.02] cursor-pointer bg-gradient-to-br ${
+                colorMap[section.color]
+              } ${isDark ? '' : 'shadow-md hover:shadow-xl'}`}
+            >
+              <div className='relative z-10'>
+                <div className='flex items-start justify-between mb-4'>
+                  <div
+                    className={`p-4 rounded-xl ${
+                      isDark ? 'bg-gray-900/50' : 'bg-white/70'
+                    } backdrop-blur-sm`}
+                  >
+                    <section.icon
+                      className={`w-6 h-6 ${iconColorMap[section.color]}`}
+                    />
+                  </div>
+                  <button
+                    className={`p-2 rounded-lg transition-all ${
+                      isDark ? 'hover:bg-gray-900/50' : 'hover:bg-white/70'
                     }`}
-                  />
-                </button>
-              </div>
-            </div>
-            {expanded.market && (
-              <div className="px-6 pb-4 text-gray-400 text-sm">
-                Detailed insights into market size, target audience, and competitive
-                landscape. Content for market analysis would be displayed here,
-                potentially with charts and data tables.
-              </div>
-            )}
-          </div>
-
-          {/* IdeaRanker */}
-          <div
-            className={`rounded-lg ${
-              isDark ? "bg-gray-800" : "bg-white border border-gray-200"
-            }`}
-          >
-            <div className="w-full flex items-center justify-between px-6 py-4">
-              <div className="flex items-center gap-3">
-                <Award className="w-5 h-5 text-blue-500" />
-                <p className={t("text-white", "text-gray-900") + " text-base font-medium"}>
-                  IdeaRanker™ Score
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleDownloadRanker}
-                  className="p-2 rounded-md hover:bg-black/10"
-                  title="Download IdeaRanker report"
-                  aria-label="Download IdeaRanker report"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => toggle("ranker")}
-                  className="p-2 rounded-md hover:bg-black/10"
-                  aria-label="Toggle section"
-                >
-                  <ChevronDown
-                    className={`w-5 h-5 transition-transform ${
-                      expanded.ranker ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-            {expanded.ranker && (
-              <div className="px-6 pb-4 text-gray-400 text-sm">
-                A breakdown of the IdeaRanker score, including viability, scalability,
-                and market fit. This could be visualized with gauges or scorecards.
-              </div>
-            )}
-          </div>
-
-          {/* Structured Pitch */}
-          <div
-            className={`rounded-lg ${
-              isDark ? "bg-gray-800" : "bg-white border border-gray-200"
-            }`}
-          >
-            <div className="w-full flex items-center justify-between px-6 py-4">
-              <div className="flex items-center gap-3">
-                <Layers className="w-5 h-5 text-blue-500" />
-                <p className={t("text-white", "text-gray-900") + " text-base font-medium"}>
-                  Structured Pitch
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleDownloadPitch}
-                  className="p-2 rounded-md hover:bg-black/10"
-                  title="Download Structured Pitch"
-                  aria-label="Download Structured Pitch"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => toggle("pitch")}
-                  className="p-2 rounded-md hover:bg-black/10"
-                  aria-label="Toggle section"
-                >
-                  <ChevronDown
-                    className={`w-5 h-5 transition-transform ${
-                      expanded.pitch ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-            {expanded.pitch && (
-              <div className="px-6 pb-4 text-gray-400 text-sm">
-                The full, generated text of the business pitch, including sections for
-                Problem, Solution, Business Model, etc.
-              </div>
-            )}
-          </div>
-
-          {/* Visual Branding */}
-          <div
-            className={`rounded-lg ${
-              isDark ? "bg-gray-800" : "bg-white border border-gray-200"
-            }`}
-          >
-            <div className="w-full flex items-center justify-between px-6 py-4">
-              <div className="flex items-center gap-3">
-                <Palette className="w-5 h-5 text-blue-500" />
-                <p className={t("text-white", "text-gray-900") + " text-base font-medium"}>
-                  Visual Branding
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleDownloadBranding}
-                  className="p-2 rounded-md hover:bg-black/10"
-                  title="Download Branding"
-                  aria-label="Download Branding"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => toggle("branding")}
-                  className="p-2 rounded-md hover:bg-black/10"
-                  aria-label="Toggle section"
-                >
-                  <ChevronDown
-                    className={`w-5 h-5 transition-transform ${
-                      expanded.branding ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-            {expanded.branding && (
-              <div className="px-6 pb-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className={`${
-                        isDark ? "bg-gray-700" : "bg-gray-100"
-                      } rounded-lg p-3 aspect-square flex items-center justify-center`}
-                    >
-                      <div className="text-6xl font-bold text-blue-500">
-                        Logo {i}
-                      </div>
-                    </div>
-                  ))}
+                  >
+                    <ArrowUpRight className='w-5 h-5' />
+                  </button>
                 </div>
-                <p className={t("text-white", "text-gray-900") + " mt-4 font-medium"}>
-                  Color Palette & Typography shown here.
-                </p>
-              </div>
-            )}
-          </div>
 
-          {/* Slides */}
-          <div
-            className={`rounded-lg ${
-              isDark ? "bg-gray-800" : "bg-white border border-gray-200"
-            }`}
-          >
-            <div className="w-full flex items-center justify-between px-6 py-4">
-              <div className="flex items-center gap-3">
-                <Presentation className="w-5 h-5 text-blue-500" />
-                <p className={t("text-white", "text-gray-900") + " text-base font-medium"}>
-                  Generated Slide Deck
+                <h3
+                  className={`text-2xl font-bold mb-3 ${
+                    isDark ? 'text-white' : 'text-gray-900'
+                  }`}
+                >
+                  {section.title}
+                </h3>
+                <p
+                  className={`text-sm leading-relaxed ${
+                    isDark ? 'text-gray-300' : 'text-gray-700'
+                  }`}
+                >
+                  {section.description}
                 </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleDownloadSlides}
-                  className="p-2 rounded-md hover:bg-black/10"
-                  title="Download Slides (summary)"
-                  aria-label="Download Slides (summary)"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => toggle("slides")}
-                  className="p-2 rounded-md hover:bg-black/10"
-                  aria-label="Toggle section"
-                >
-                  <ChevronDown
-                    className={`w-5 h-5 transition-transform ${
-                      expanded.slides ? "rotate-180" : ""
+
+                <div className='mt-6 flex items-center gap-3'>
+                  <button
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      isDark
+                        ? 'bg-gray-900/50 hover:bg-gray-900 text-white backdrop-blur-sm'
+                        : 'bg-white/70 hover:bg-white text-gray-900 backdrop-blur-sm'
                     }`}
-                  />
-                </button>
+                  >
+                    <Download className='w-4 h-4' />
+                    Export
+                  </button>
+                  <button
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      isDark
+                        ? 'hover:bg-gray-900/30 text-white'
+                        : 'hover:bg-white/50 text-gray-900'
+                    }`}
+                  >
+                    View Details
+                  </button>
+                </div>
               </div>
+
+              {/* Decorative gradient overlay */}
+              <div
+                className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-br ${
+                  isDark
+                    ? 'from-white/5 to-transparent'
+                    : 'from-white/40 to-transparent'
+                }`}
+              />
             </div>
-            {expanded.slides && (
-              <div className="px-6 pb-4 text-gray-400 text-sm">
-                An embedded viewer could display the generated presentation slides.
-                Use the download icon to export a quick summary PDF.
-              </div>
-            )}
-          </div>
+          ))}
         </div>
       </main>
     </div>
-  );
-};
+  )
+}
 
-export default PitchDetailsPage;
+export default PitchDetailsPage
