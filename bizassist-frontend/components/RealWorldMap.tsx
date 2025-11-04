@@ -28,6 +28,7 @@ type Props = {
   region: string;                  // 'international' | 'bangladesh'
   companies?: Company[];           // show only in BD mode
   topDistricts?: string[];         // optional list from AI to highlight in BD
+  exportRef?: React.RefObject<HTMLDivElement>;
 };
 
 /** ────────────────────── COORDS / ALIASES ────────────────────── **/
@@ -414,7 +415,7 @@ function HighlightPolygons({
 }
 
 /** ───────────────────────── MAIN MAP ───────────────────────── **/
-export default function RealWorldMap({ theme, markets, region, companies = [], topDistricts = [] }: Props) {
+export default function RealWorldMap({ theme, markets, region, companies = [], topDistricts = [], exportRef }: Props) {
   const isDark = theme === 'dark';
 
   // Top-5 (sort by percentage)
@@ -507,7 +508,7 @@ export default function RealWorldMap({ theme, markets, region, companies = [], t
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={exportRef}>
       <MapContainer
         center={[20, 0]}
         zoom={3}
@@ -521,7 +522,7 @@ export default function RealWorldMap({ theme, markets, region, companies = [], t
         style={{ height: 420, width: '100%', borderRadius: 12, overflow: 'hidden' }}
         className={isDark ? 'map-dark' : 'map-light'}
       >
-        <TileLayer url={tileUrl} attribution={attribution} />
+        <TileLayer url={tileUrl} attribution={attribution} crossOrigin="anonymous"/>
 
         {/* Auto snap & lock to region (no animation to avoid classList crash) */}
         <FitToRegion region={region} points={internationalPoints} />
