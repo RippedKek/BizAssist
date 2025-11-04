@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Sparkles, Download, Share, Loader2, ExternalLink } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
+import { upsertStep } from '../firebase/pitches'
 
 type RankerData = {
   ideaTitle: string
@@ -43,6 +44,47 @@ const getLogoUrl = (domain: string | null): string | null => {
 
 type CompetitorsData = {
   competitors: Competitor[]
+}
+
+// Normalize API response into RankerData shape expected by UI
+const normalizeRankerData = (raw: any): RankerData | null => {
+  if (!raw) return null
+  // Handle both camelCase and snake_case keys from API
+  const ideaTitle = raw.ideaTitle ?? raw.idea_title ?? 'Your Business'
+  const overallScore = Number(raw.overallScore ?? raw.overall_score ?? 0)
+  const readinessLabel =
+    raw.readinessLabel ?? raw.readiness_label ?? 'Analyzing'
+  const scoresRaw = raw.scores ?? raw.score_breakdown ?? {}
+
+  const getScore = (obj: any, key: string, alt?: string) => {
+    const v = obj?.[key] ?? (alt ? obj?.[alt] : undefined)
+    if (v == null) return { score: 0, justification: '' }
+    // Support forms: number or { score, justification }
+    if (typeof v === 'number' || typeof v === 'string') {
+      return { score: Number(v) || 0, justification: '' }
+    }
+    return {
+      score: Number(v.score ?? 0) || 0,
+      justification: String(v.justification ?? v.reason ?? ''),
+    }
+  }
+
+  const scores = {
+    novelty: getScore(scoresRaw, 'novelty'),
+    localCapability: getScore(scoresRaw, 'localCapability', 'local_capability'),
+    feasibility: getScore(scoresRaw, 'feasibility'),
+    sustainability: getScore(scoresRaw, 'sustainability'),
+    globalDemand: getScore(scoresRaw, 'globalDemand', 'global_demand'),
+  }
+
+  const nextStepsArr = raw.nextSteps ?? raw.next_steps ?? []
+  const nextSteps = Array.isArray(nextStepsArr)
+    ? nextStepsArr.map((s: any) => ({
+        text: typeof s === 'string' ? s : s?.text ?? '',
+      }))
+    : []
+
+  return { ideaTitle, overallScore, readinessLabel, scores, nextSteps }
 }
 
 // Competitor Card Component with logo
@@ -177,7 +219,21 @@ const IdeaRankerPage = () => {
       }
 
       const result = await response.json()
-      setRankerData(result.data)
+      const normalized = normalizeRankerData(result.data)
+      setRankerData(normalized)
+      try {
+        const pitchId =
+          typeof window !== 'undefined'
+            ? sessionStorage.getItem('bizassist-pitch-id')
+            : null
+        if (pitchId) {
+          await upsertStep(pitchId, 'idea_ranking', {
+            rankerData: normalized ?? result.data,
+          })
+        }
+      } catch (e) {
+        console.error('Error saving idea ranking:', e)
+      }
     } catch (error) {
       console.error('Error fetching idea ranker score:', error)
       setError('Failed to generate analysis. Please try again.')
@@ -205,6 +261,19 @@ const IdeaRankerPage = () => {
 
       const result = await response.json()
       setCompetitors(result.data)
+      try {
+        const pitchId =
+          typeof window !== 'undefined'
+            ? sessionStorage.getItem('bizassist-pitch-id')
+            : null
+        if (pitchId) {
+          await upsertStep(pitchId, 'idea_ranking', {
+            competitors: result.data,
+          })
+        }
+      } catch (e) {
+        console.error('Error saving competitors:', e)
+      }
     } catch (error) {
       console.error('Error fetching competitors:', error)
       // Don't show error to user, just log it
@@ -219,14 +288,12 @@ const IdeaRankerPage = () => {
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    
-    const width = canvas.width
-    const height = canvas.height
-    const centerX = width / 2
-    const centerY = height / 2
-    const radius = Math.min(width, height) / 2 - 40
 
-    ctx.clearRect(0, 0, width, height)
+    const sanitize = (val: any) => {
+      const n = Number(val)
+      if (!Number.isFinite(n)) return 0
+      return Math.max(0, Math.min(100, n))
+    }
 
     const labels = [
       'Novelty',
@@ -236,90 +303,99 @@ const IdeaRankerPage = () => {
       'Global Demand',
     ]
     const data = [
-      rankerData.scores.novelty.score,
-      rankerData.scores.localCapability.score,
-      rankerData.scores.feasibility.score,
-      rankerData.scores.sustainability.score,
-      rankerData.scores.globalDemand.score,
+      sanitize(rankerData.scores.novelty.score),
+      sanitize(rankerData.scores.localCapability.score),
+      sanitize(rankerData.scores.feasibility.score),
+      sanitize(rankerData.scores.sustainability.score),
+      sanitize(rankerData.scores.globalDemand.score),
     ]
-    const max = 100
 
-    // Draw grid circles
-    ctx.strokeStyle = isDark
-      ? 'rgba(71, 85, 105, 0.5)'
-      : 'rgba(203, 213, 225, 0.7)'
-    ctx.lineWidth = 1
-    for (let i = 1; i <= 5; i++) {
-      ctx.beginPath()
-      ctx.arc(centerX, centerY, (radius / 5) * i, 0, 2 * Math.PI)
-      ctx.stroke()
-    }
+    const draw = () => {
+      const width = canvas.width
+      const height = canvas.height
+      const centerX = width / 2
+      const centerY = height / 2
+      const radius = Math.min(width, height) / 2 - 40
 
-    // Draw axis lines
-    const angleStep = (2 * Math.PI) / labels.length
-    labels.forEach((label, i) => {
-      const angle = i * angleStep - Math.PI / 2
-      const x = centerX + radius * Math.cos(angle)
-      const y = centerY + radius * Math.sin(angle)
+      ctx.clearRect(0, 0, width, height)
 
-      ctx.beginPath()
-      ctx.moveTo(centerX, centerY)
-      ctx.lineTo(x, y)
-      ctx.stroke()
-    })
-
-    // Draw data polygon
-    ctx.beginPath()
-    data.forEach((value, i) => {
-      const angle = i * angleStep - Math.PI / 2
-      const r = (value / max) * radius
-      const x = centerX + r * Math.cos(angle)
-      const y = centerY + r * Math.sin(angle)
-
-      if (i === 0) {
-        ctx.moveTo(x, y)
-      } else {
-        ctx.lineTo(x, y)
+      // Grid
+      ctx.strokeStyle = isDark
+        ? 'rgba(71, 85, 105, 0.5)'
+        : 'rgba(203, 213, 225, 0.7)'
+      ctx.lineWidth = 1
+      for (let i = 1; i <= 5; i++) {
+        ctx.beginPath()
+        ctx.arc(centerX, centerY, (radius / 5) * i, 0, 2 * Math.PI)
+        ctx.stroke()
       }
-    })
-    ctx.closePath()
-    ctx.fillStyle = isDark
-      ? 'rgba(59, 130, 246, 0.2)'
-      : 'rgba(16, 185, 129, 0.2)'
-    ctx.fill()
-    ctx.strokeStyle = isDark ? '#3B82F6' : '#10B981'
-    ctx.lineWidth = 2
-    ctx.stroke()
 
-    // Draw data points
-    data.forEach((value, i) => {
-      const angle = i * angleStep - Math.PI / 2
-      const r = (value / max) * radius
-      const x = centerX + r * Math.cos(angle)
-      const y = centerY + r * Math.sin(angle)
+      // Axes
+      const angleStep = (2 * Math.PI) / labels.length
+      labels.forEach((_, i) => {
+        const angle = i * angleStep - Math.PI / 2
+        const x = centerX + radius * Math.cos(angle)
+        const y = centerY + radius * Math.sin(angle)
+        ctx.beginPath()
+        ctx.moveTo(centerX, centerY)
+        ctx.lineTo(x, y)
+        ctx.stroke()
+      })
 
+      // Polygon
       ctx.beginPath()
-      ctx.arc(x, y, 5, 0, 2 * Math.PI)
-      ctx.fillStyle = isDark ? '#3B82F6' : '#10B981'
+      data.forEach((value, i) => {
+        const angle = i * angleStep - Math.PI / 2
+        const r = (value / 100) * radius
+        const x = centerX + r * Math.cos(angle)
+        const y = centerY + r * Math.sin(angle)
+        if (i === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      })
+      ctx.closePath()
+      ctx.fillStyle = isDark
+        ? 'rgba(59, 130, 246, 0.2)'
+        : 'rgba(16, 185, 129, 0.2)'
       ctx.fill()
-      ctx.strokeStyle = '#FFFFFF'
+      ctx.strokeStyle = isDark ? '#3B82F6' : '#10B981'
       ctx.lineWidth = 2
       ctx.stroke()
-    })
 
-    // Draw labels
-    ctx.fillStyle = isDark ? 'rgba(248, 250, 252, 1)' : 'rgba(30, 41, 59, 1)'
-    ctx.font = 'bold 14px Inter, sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
+      // Data points
+      data.forEach((value, i) => {
+        const angle = i * angleStep - Math.PI / 2
+        const r = (value / 100) * radius
+        const x = centerX + r * Math.cos(angle)
+        const y = centerY + r * Math.sin(angle)
+        ctx.beginPath()
+        ctx.arc(x, y, 5, 0, 2 * Math.PI)
+        ctx.fillStyle = isDark ? '#3B82F6' : '#10B981'
+        ctx.fill()
+        ctx.strokeStyle = '#FFFFFF'
+        ctx.lineWidth = 2
+        ctx.stroke()
+      })
 
-    labels.forEach((label, i) => {
-      const angle = i * angleStep - Math.PI / 2
-      const labelRadius = radius + 30
-      const x = centerX + labelRadius * Math.cos(angle)
-      const y = centerY + labelRadius * Math.sin(angle)
-      ctx.fillText(label, x, y)
-    })
+      // Labels
+      ctx.fillStyle = isDark ? 'rgba(248, 250, 252, 1)' : 'rgba(30, 41, 59, 1)'
+      ctx.font = 'bold 14px Inter, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      labels.forEach((label, i) => {
+        const angle = i * angleStep - Math.PI / 2
+        const labelRadius = radius + 30
+        const x = centerX + labelRadius * Math.cos(angle)
+        const y = centerY + labelRadius * Math.sin(angle)
+        ctx.fillText(label, x, y)
+      })
+    }
+
+    // Draw after layout
+    if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+      requestAnimationFrame(draw)
+    } else {
+      draw()
+    }
   }, [rankerData, theme, isDark])
 
   const handleGeneratePitch = () => {
@@ -516,9 +592,12 @@ const IdeaRankerPage = () => {
                 </ul>
               ) : (
                 <p
-                  className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
+                  className={`text-sm ${
+                    isDark ? 'text-gray-400' : 'text-gray-600'
+                  }`}
                 >
-                  Next steps will be generated based on your business analysis...
+                  Next steps will be generated based on your business
+                  analysis...
                 </p>
               )}
             </div>
@@ -526,43 +605,53 @@ const IdeaRankerPage = () => {
         </div>
 
         {/* Top Competitors */}
-        {competitors && competitors.competitors && competitors.competitors.length > 0 && (
-          <div
-            className={`rounded-2xl border ${
-              isDark
-                ? 'bg-gray-800/50 border-gray-700'
-                : 'bg-white border-gray-200'
-            } shadow-xl overflow-hidden mb-12`}
-          >
-            <div className={`p-8 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-              <h2 className='text-2xl font-bold mb-2'>Top Competitors</h2>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Key players in your market space
-              </p>
-            </div>
-            <div className='p-8'>
-              {isLoadingCompetitors ? (
-                <div className='flex items-center justify-center py-12'>
-                  <Loader2
-                    className={`w-8 h-8 animate-spin ${
-                      isDark ? 'text-blue-500' : 'text-emerald-500'
-                    }`}
-                  />
-                </div>
-              ) : (
-                <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-                  {competitors.competitors.map((competitor, idx) => (
-                    <CompetitorCard
-                      key={idx}
-                      competitor={competitor}
-                      isDark={isDark}
+        {competitors &&
+          competitors.competitors &&
+          competitors.competitors.length > 0 && (
+            <div
+              className={`rounded-2xl border ${
+                isDark
+                  ? 'bg-gray-800/50 border-gray-700'
+                  : 'bg-white border-gray-200'
+              } shadow-xl overflow-hidden mb-12`}
+            >
+              <div
+                className={`p-8 border-b ${
+                  isDark ? 'border-gray-700' : 'border-gray-200'
+                }`}
+              >
+                <h2 className='text-2xl font-bold mb-2'>Top Competitors</h2>
+                <p
+                  className={`text-sm ${
+                    isDark ? 'text-gray-400' : 'text-gray-600'
+                  }`}
+                >
+                  Key players in your market space
+                </p>
+              </div>
+              <div className='p-8'>
+                {isLoadingCompetitors ? (
+                  <div className='flex items-center justify-center py-12'>
+                    <Loader2
+                      className={`w-8 h-8 animate-spin ${
+                        isDark ? 'text-blue-500' : 'text-emerald-500'
+                      }`}
                     />
-                  ))}
-                </div>
-              )}
+                  </div>
+                ) : (
+                  <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+                    {competitors.competitors.map((competitor, idx) => (
+                      <CompetitorCard
+                        key={idx}
+                        competitor={competitor}
+                        isDark={isDark}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Score Breakdown */}
         <div
@@ -572,7 +661,11 @@ const IdeaRankerPage = () => {
               : 'bg-white border-gray-200'
           } shadow-xl overflow-hidden`}
         >
-          <div className={`p-8 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div
+            className={`p-8 border-b ${
+              isDark ? 'border-gray-700' : 'border-gray-200'
+            }`}
+          >
             <h2 className='text-2xl font-bold'>Detailed Score Breakdown</h2>
           </div>
           <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 p-8'>
@@ -586,7 +679,10 @@ const IdeaRankerPage = () => {
                   globalDemand: 'Global Demand',
                 }
 
-                const scoreValue = value as { score: number; justification: string }
+                const scoreValue = value as {
+                  score: number
+                  justification: string
+                }
 
                 return (
                   <div

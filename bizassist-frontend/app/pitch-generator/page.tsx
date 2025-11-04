@@ -19,6 +19,7 @@ import {
   Pause,
 } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
+import { upsertStep } from '../firebase/pitches'
 
 interface PitchSection {
   sectionName: string
@@ -231,6 +232,28 @@ const PitchGeneratorPage = () => {
 
       const result = await response.json()
       setPitchSpeech(result.data)
+      try {
+        const pitchId =
+          typeof window !== 'undefined'
+            ? sessionStorage.getItem('bizassist-pitch-id')
+            : null
+        if (pitchId) {
+          const extra: any = {
+            pitchSpeech: result.data,
+            selectedSections,
+            timeLimit,
+            businessTitle,
+            summary,
+          }
+          const ai = additionalInfo.trim()
+          if (ai) {
+            extra.additionalInfo = ai
+          }
+          await upsertStep(pitchId, 'pitch_generation', extra)
+        }
+      } catch (persistErr) {
+        console.error('Error saving pitch generation:', persistErr)
+      }
       // Persist for pitch-practise page
       try {
         if (typeof window !== 'undefined') {
@@ -400,8 +423,6 @@ const PitchGeneratorPage = () => {
             )
           }
         }
-
-        // We will use the hidden <audio> element for consistent controls
 
         // Prepare Blob/URL for download and <audio> element
         // const blob = await audioDataToBlob(audioData)

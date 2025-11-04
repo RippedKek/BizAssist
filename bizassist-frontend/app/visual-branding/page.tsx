@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Sparkles, Loader2 } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
+import { upsertStep } from '../firebase/pitches'
 
 interface Logo {
   id: number
@@ -462,7 +463,7 @@ const VisualBrandingScreen = () => {
               )}
             </button>
             <button
-              onClick={() => {
+              onClick={async () => {
                 // Store selected branding in sessionStorage
                 try {
                   const brandingData = {
@@ -475,6 +476,15 @@ const VisualBrandingScreen = () => {
                     'bizassist-branding',
                     JSON.stringify(brandingData)
                   )
+                  const pitchId = sessionStorage.getItem('bizassist-pitch-id')
+                  if (pitchId) {
+                    await upsertStep(pitchId, 'visual_branding', brandingData, {
+                      businessTitle: businessName,
+                      summary,
+                      status: 'completed',
+                      currentStep: 'visual_branding',
+                    })
+                  }
                 } catch (error) {
                   console.error('Error saving branding:', error)
                 }

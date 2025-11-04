@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Sparkles, FileDown, ArrowRight, Loader2, ChevronDown } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
+import { upsertStep } from '../firebase/pitches'
 
 type MarketStat = {
   label: string
@@ -130,6 +131,15 @@ const MarketDashboardPage = () => {
       }
 
       setInsights(data.insights)
+      // Persist to Firestore
+      try {
+        const pitchId = typeof window !== 'undefined' ? sessionStorage.getItem('bizassist-pitch-id') : null
+        if (pitchId) {
+          await upsertStep(pitchId, 'market_analysis', data.insights)
+        }
+      } catch (persistErr) {
+        console.error('Error saving market analysis:', persistErr)
+      }
     } catch (fetchError) {
       console.error('Error fetching market insights:', fetchError)
       setError(fetchError instanceof Error ? fetchError.message : 'Unable to load market insights')
