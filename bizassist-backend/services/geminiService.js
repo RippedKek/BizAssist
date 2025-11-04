@@ -257,15 +257,21 @@ class GeminiService {
     }
   }
 
-  async generatePitchSpeech(summary, businessTitle, selectedSections, timeLimit, additionalInfo = '') {
+  async generatePitchSpeech(
+    summary,
+    businessTitle,
+    selectedSections,
+    timeLimit,
+    additionalInfo = ''
+  ) {
     const sections = selectedSections.join(', ')
     let additionalGuidanceText = ''
-    
+
     if (additionalInfo && additionalInfo.trim()) {
       additionalGuidanceText = `\n\nAdditional Guidance and Context:\n${additionalInfo}\n\nPlease tailor the pitch speech based on the above guidance. Consider the presentation venue, audience, judges, or specific focus areas mentioned.`
     }
-    
-    const prompt = `You are a professional pitch coach and presentation expert. Generate a complete pitch speech for a business idea with precise timing information for each section.
+
+    const prompt = `You are a professional pitch coach and presentation expert. Generate a complete pitch speech for a business idea with precise timing information for each section. This pitch speech might be used to convert into a speech using Eleven Labs API. So also put emotions and intonations in the speech with []. Like [excited], [clears throat], [energetic] etc before the content.
 
     Business Summary: ${summary}
     Business Title: ${businessTitle}
@@ -295,7 +301,11 @@ class GeminiService {
     - Make the speech conversational and engaging, suitable for investor presentations
     - Focus on Bangladesh market context
     - Ensure the speech flows naturally between sections
-    - Total time should be close to but not exceed ${timeLimit} minutes${additionalInfo && additionalInfo.trim() ? '\n- Incorporate the additional guidance provided above into the pitch speech content and tone' : ''}
+    - Total time should be close to but not exceed ${timeLimit} minutes${
+      additionalInfo && additionalInfo.trim()
+        ? '\n- Incorporate the additional guidance provided above into the pitch speech content and tone'
+        : ''
+    }
 
     Return ONLY valid JSON, without any backticks, code fences, or commentary.`
 
@@ -312,7 +322,14 @@ class GeminiService {
     }
   }
 
-  async generateSlideCode(sectionName, sectionContent, businessTitle, summary, slideNumber, totalSlides) {
+  async generateSlideCode(
+    sectionName,
+    sectionContent,
+    businessTitle,
+    summary,
+    slideNumber,
+    totalSlides
+  ) {
     const prompt = `You are a professional presentation designer. Generate PowerPoint slide code using pptxgenjs library for a pitch presentation.
 
     Business Title: ${businessTitle}
@@ -351,7 +368,7 @@ class GeminiService {
     const result = await this.model.generateContent(prompt)
     const response = await result.response
     const rawText = response.text().trim()
-    
+
     // Remove code fences and extract just the code
     let cleanedCode = rawText
       .replace(/```javascript\n?/gi, '')

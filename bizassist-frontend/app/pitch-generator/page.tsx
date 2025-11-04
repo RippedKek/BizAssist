@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Sparkles,
@@ -15,6 +15,8 @@ import {
   Info,
   Presentation,
   ArrowRight,
+  Play,
+  Pause,
 } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
 
@@ -97,8 +99,23 @@ const PitchGeneratorPage = () => {
   const [pitchSpeech, setPitchSpeech] = useState<PitchSpeechData | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [isTtsLoading, setIsTtsLoading] = useState(false)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+  const [sectionAudioUrls, setSectionAudioUrls] = useState<
+    Record<number, string>
+  >({})
+  const [sectionLoadingIndex, setSectionLoadingIndex] = useState<number | null>(
+    null
+  )
+  const [playingSectionIndex, setPlayingSectionIndex] = useState<number | null>(
+    null
+  )
 
   const isDark = theme === 'dark'
+  // ElevenLabs voice configuration (keep commented voice id as reference)
+  const voiceId = 'iP95p4xoKVk53GoZ742B' //'21m00Tcm4TlvDq8ikWAM'
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -115,6 +132,17 @@ const PitchGeneratorPage = () => {
       console.error('Error retrieving summary:', error)
     }
   }, [])
+
+  // Cleanup audio URL when pitch changes or on unmount
+  useEffect(() => {
+    return () => {
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl)
+      }
+      // revoke any section urls
+      Object.values(sectionAudioUrls).forEach((url) => URL.revokeObjectURL(url))
+    }
+  }, [audioUrl, sectionAudioUrls])
 
   const fetchBusinessNames = async (summaryText: string) => {
     setLoadingNames(true)
@@ -279,6 +307,316 @@ const PitchGeneratorPage = () => {
     } catch (error) {
       console.error('Error copying:', error)
     }
+  }
+
+  const buildSpeechText = () => {
+    if (!pitchSpeech) return ''
+    // A concise, narration-friendly text without timestamps or separators
+    const parts = pitchSpeech.sections.map((section) => {
+      return `${section.sectionName}: ${section.content}`
+    })
+    return parts.join('\n\n')
+  }
+
+  const handleGenerateAndPlayTTS = async () => {
+    if (!pitchSpeech) return
+    try {
+      // If we already have audio, simply toggle play
+      if (audioUrl && audioRef.current) {
+        if (isAudioPlaying) {
+          audioRef.current.pause()
+          setIsAudioPlaying(false)
+        } else {
+          await audioRef.current.play()
+          setIsAudioPlaying(true)
+        }
+        return
+      }
+
+      const apiKey = process.env.NEXT_PUBLIC_ELEVEN_LABS_API_KEY
+      if (!apiKey) {
+        alert('ElevenLabs API key is missing.')
+        return
+      }
+
+      setIsTtsLoading(true)
+      // Use official ElevenLabs JS client via dynamic import to avoid SSR issues
+      // Falls back to REST if SDK fails for any reason
+      const text = buildSpeechText()
+      try {
+        // const { ElevenLabsClient, play } = await import(
+        //   '@elevenlabs/elevenlabs-js'
+        // )
+        // const elevenlabs = new ElevenLabsClient({ apiKey })
+        // const audioData = await elevenlabs.textToSpeech.convert(voiceId, {
+        //   text,
+        //   modelId: 'eleven_v3',
+        //   outputFormat: 'mp3_44100_128',
+        // })
+
+        const endpoint = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': apiKey as string,
+          },
+          body: JSON.stringify({
+            text,
+            model_id: 'eleven_v3',
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.8,
+            },
+            output_format: 'mp3_44100_128',
+          }),
+        })
+
+        if (!response.ok) {
+          let details = ''
+          try {
+            details = await response.text()
+          } catch (e) {}
+          console.error('TTS HTTP error', {
+            status: response.status,
+            statusText: response.statusText,
+            body: details,
+          })
+          throw new Error('Failed to generate speech audio')
+        }
+
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        setAudioUrl(url)
+        if (audioRef.current) {
+          audioRef.current.src = url
+          try {
+            await audioRef.current.play()
+            setIsAudioPlaying(true)
+          } catch (playErr3) {
+            console.error(
+              'Autoplay blocked or play failed (fallback):',
+              playErr3
+            )
+          }
+        }
+
+        // We will use the hidden <audio> element for consistent controls
+
+        // Prepare Blob/URL for download and <audio> element
+        // const blob = await audioDataToBlob(audioData)
+
+        // const url = URL.createObjectURL(blob)
+        setAudioUrl(url)
+        if (audioRef.current) {
+          audioRef.current.src = url
+          try {
+            await audioRef.current.play()
+            setIsAudioPlaying(true)
+          } catch (playErr2) {
+            console.error(
+              'Autoplay blocked or play failed (audio element):',
+              playErr2
+            )
+          }
+        }
+      } catch (sdkErr) {
+        console.error('ElevenLabs request error:', sdkErr)
+
+        const endpoint = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': apiKey as string,
+          },
+          body: JSON.stringify({
+            text,
+            model_id: 'eleven_v3',
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.8,
+            },
+            output_format: 'mp3_44100_128',
+          }),
+        })
+
+        if (!response.ok) {
+          let details = ''
+          try {
+            details = await response.text()
+          } catch (e) {}
+          console.error('TTS HTTP error', {
+            status: response.status,
+            statusText: response.statusText,
+            body: details,
+          })
+          throw new Error('Failed to generate speech audio')
+        }
+
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        setAudioUrl(url)
+        if (audioRef.current) {
+          audioRef.current.src = url
+          try {
+            await audioRef.current.play()
+            setIsAudioPlaying(true)
+          } catch (playErr3) {
+            console.error(
+              'Autoplay blocked or play failed (fallback):',
+              playErr3
+            )
+          }
+        }
+      }
+    } catch (error) {
+      console.error('TTS error:', error)
+      alert('Failed to generate or play audio. Please try again.')
+    } finally {
+      setIsTtsLoading(false)
+    }
+  }
+
+  const handleTogglePlay = async () => {
+    if (!audioRef.current) return
+    if (isAudioPlaying) {
+      audioRef.current.pause()
+      setIsAudioPlaying(false)
+    } else {
+      try {
+        await audioRef.current.play()
+        setIsAudioPlaying(true)
+      } catch (e) {
+        console.error('Play error:', e)
+      }
+    }
+  }
+
+  const handleDownloadAudio = () => {
+    if (!audioUrl) return
+    const link = document.createElement('a')
+    link.href = audioUrl
+    link.download = `${businessTitle || 'pitch'}_speech.mp3`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const audioDataToBlob = async (data: any): Promise<Blob> => {
+    if (data instanceof Blob) return data
+    if (data instanceof ArrayBuffer)
+      return new Blob([data], { type: 'audio/mpeg' })
+    // Try Web API objects that expose arrayBuffer()
+    try {
+      if (data && typeof data.arrayBuffer === 'function') {
+        const ab: ArrayBuffer = await data.arrayBuffer()
+        return new Blob([ab], { type: 'audio/mpeg' })
+      }
+    } catch {}
+    // Fallback: wrap in Response to coerce stream/body-like to Blob
+    try {
+      const resp = new Response(data as unknown as BodyInit)
+      const blob = await resp.blob()
+      return blob
+    } catch {}
+    throw new Error('Unsupported audio data type from ElevenLabs')
+  }
+
+  const buildSectionSpeechText = (sectionIndex: number) => {
+    if (!pitchSpeech) return ''
+    const s = pitchSpeech.sections[sectionIndex]
+    if (!s) return ''
+    return `${s.sectionName}: ${s.content}`
+  }
+
+  const ensureSectionAudio = async (sectionIndex: number): Promise<string> => {
+    if (sectionAudioUrls[sectionIndex]) return sectionAudioUrls[sectionIndex]
+
+    const apiKey = process.env.NEXT_PUBLIC_ELEVEN_LABS_API_KEY
+    if (!apiKey) throw new Error('ElevenLabs API key is missing.')
+
+    const text = buildSectionSpeechText(sectionIndex)
+
+    try {
+      const endpoint = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'xi-api-key': apiKey as string,
+        },
+        body: JSON.stringify({
+          text,
+          model_id: 'eleven_v3',
+          voice_settings: { stability: 0.5, similarity_boost: 0.8 },
+          output_format: 'mp3_44100_128',
+        }),
+      })
+      if (!response.ok) {
+        let details = ''
+        try {
+          details = await response.text()
+        } catch {}
+        console.error('TTS HTTP error (section)', {
+          status: response.status,
+          statusText: response.statusText,
+          body: details,
+        })
+        throw new Error('Failed to generate section speech audio')
+      }
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      setSectionAudioUrls((prev) => ({ ...prev, [sectionIndex]: url }))
+      return url
+    } catch (err) {
+      console.error('ElevenLabs request error (section):', err)
+      throw err
+    }
+  }
+
+  const handleTogglePlaySection = async (sectionIndex: number) => {
+    if (!pitchSpeech) return
+    try {
+      // Toggling same section
+      if (playingSectionIndex === sectionIndex && audioRef.current) {
+        if (!audioRef.current.paused) {
+          audioRef.current.pause()
+          setIsAudioPlaying(false)
+        } else {
+          await audioRef.current.play()
+          setIsAudioPlaying(true)
+        }
+        return
+      }
+
+      setSectionLoadingIndex(sectionIndex)
+      const url = await ensureSectionAudio(sectionIndex)
+
+      if (audioRef.current) {
+        audioRef.current.src = url
+        await audioRef.current.play()
+        setIsAudioPlaying(true)
+        setPlayingSectionIndex(sectionIndex)
+      }
+    } catch (e) {
+      console.error('Section TTS play error:', e)
+      alert('Failed to generate or play this section. Please try again.')
+    } finally {
+      setSectionLoadingIndex(null)
+    }
+  }
+
+  const handleDownloadSectionAudio = (sectionIndex: number) => {
+    const url = sectionAudioUrls[sectionIndex]
+    if (!url || !pitchSpeech) return
+    const section = pitchSpeech.sections[sectionIndex]
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${businessTitle || 'pitch'}_${section.sectionName}.mp3`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   const formatTime = (minutes: number, seconds: number) => {
@@ -683,6 +1021,25 @@ const PitchGeneratorPage = () => {
                           <Copy className='w-5 h-5' />
                         )}
                       </button>
+                      {/* TTS Play/Pause */}
+                      <button
+                        onClick={handleGenerateAndPlayTTS}
+                        className={`p-2.5 rounded-lg transition-all ${
+                          isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                        } disabled:opacity-50`}
+                        aria-label={
+                          isAudioPlaying ? 'Pause audio' : 'Play audio'
+                        }
+                        disabled={isTtsLoading}
+                      >
+                        {isTtsLoading ? (
+                          <Sparkles className='w-5 h-5 animate-spin' />
+                        ) : isAudioPlaying ? (
+                          <Pause className='w-5 h-5' />
+                        ) : (
+                          <Play className='w-5 h-5' />
+                        )}
+                      </button>
                       <button
                         onClick={handleDownloadCSV}
                         className={`p-2.5 rounded-lg ${
@@ -691,6 +1048,17 @@ const PitchGeneratorPage = () => {
                         aria-label='Download CSV'
                       >
                         <FileText className='w-5 h-5' />
+                      </button>
+                      {/* Download Audio */}
+                      <button
+                        onClick={handleDownloadAudio}
+                        className={`p-2.5 rounded-lg ${
+                          isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                        } transition-all disabled:opacity-50`}
+                        aria-label='Download audio'
+                        disabled={!audioUrl}
+                      >
+                        <Download className='w-5 h-5' />
                       </button>
                     </div>
                   </div>
@@ -762,6 +1130,19 @@ const PitchGeneratorPage = () => {
                   </div>
                 </div>
 
+                {/* Hidden audio element for playback control */}
+                <audio
+                  ref={audioRef}
+                  onEnded={() => setIsAudioPlaying(false)}
+                  onPause={() => setIsAudioPlaying(false)}
+                  onPlay={() => setIsAudioPlaying(true)}
+                  onError={(e) => {
+                    const target = e.target as HTMLAudioElement
+                    console.error('Audio element error', target.error)
+                  }}
+                  className='hidden'
+                />
+
                 {/* Pitch Content */}
                 <div className='p-8 space-y-6 max-h-[calc(100vh-150px)] overflow-y-auto'>
                   {pitchSpeech.sections.map((section, idx) => (
@@ -805,6 +1186,39 @@ const PitchGeneratorPage = () => {
                               )}
                             </p>
                           </div>
+                        </div>
+                        <div className='flex items-center gap-2'>
+                          <button
+                            onClick={() => handleTogglePlaySection(idx)}
+                            className={`p-2 rounded-lg ${
+                              isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+                            } transition-colors disabled:opacity-50`}
+                            disabled={sectionLoadingIndex === idx}
+                            aria-label={
+                              playingSectionIndex === idx && isAudioPlaying
+                                ? 'Pause section audio'
+                                : 'Play section audio'
+                            }
+                          >
+                            {sectionLoadingIndex === idx ? (
+                              <Sparkles className='w-5 h-5 animate-spin' />
+                            ) : playingSectionIndex === idx &&
+                              isAudioPlaying ? (
+                              <Pause className='w-5 h-5' />
+                            ) : (
+                              <Play className='w-5 h-5' />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleDownloadSectionAudio(idx)}
+                            className={`p-2 rounded-lg ${
+                              isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+                            } transition-colors disabled:opacity-50`}
+                            disabled={!sectionAudioUrls[idx]}
+                            aria-label='Download section audio'
+                          >
+                            <Download className='w-5 h-5' />
+                          </button>
                         </div>
                       </div>
                       <div
