@@ -3,6 +3,9 @@
 import React, { useState } from 'react'
 import { Sparkles } from 'lucide-react'
 import { Lightbulb } from 'lucide-react'
+import { useAppSelector } from '../app/redux/hooks'
+import { createPitchForUser } from '../app/firebase/pitches'
+import { appendPitchIdToUser } from '../app/firebase/users'
 
 // Modal Component
 const InputIdeaModal = ({ isOpen, onClose, theme }) => {
@@ -10,6 +13,7 @@ const InputIdeaModal = ({ isOpen, onClose, theme }) => {
   const [summary, setSummary] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const { user } = useAppSelector((state) => state.user)
 
   const isDark = theme === 'dark'
 
@@ -50,10 +54,32 @@ const InputIdeaModal = ({ isOpen, onClose, theme }) => {
     }
   }
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (typeof window !== 'undefined' && summary) {
       try {
         sessionStorage.setItem('bizassist-shared-summary', summary)
+        // Create a new pitch if not already present
+        const existingPitchId = sessionStorage.getItem('bizassist-pitch-id')
+        if (!existingPitchId && user?.uid) {
+          const pitchId = await createPitchForUser(
+            { uid: user.uid, email: user.email },
+            {
+              status: 'in_progress',
+              currentStep: 'idea_summary',
+              summary,
+              draftIdea: { ideaText, aiSummary: summary },
+            }
+          )
+          sessionStorage.setItem('bizassist-pitch-id', pitchId)
+          // Append pitchId to user's profile document keyed by email
+          if (user.email) {
+            try {
+              await appendPitchIdToUser(user.email, pitchId)
+            } catch (e) {
+              console.error('Failed to append pitchId to user profile:', e)
+            }
+          }
+        }
       } catch (error) {
         console.error('Error storing summary:', error)
       }
