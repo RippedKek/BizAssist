@@ -89,7 +89,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
           {showMyPitchesLink && (
             <a
-              href='#'
+              href='/pitch-list'
               className={`${
                 isDark
                   ? 'text-gray-300 hover:text-white'
