@@ -74,7 +74,6 @@ const CompetitorCard = ({
               className='w-10 h-10 rounded-lg object-contain bg-white p-1'
               onError={() => setLogoError(true)}
               onLoad={(e) => {
-                // Check if image loaded successfully
                 const img = e.target as HTMLImageElement
                 if (!img.complete || img.naturalHeight === 0) {
                   setLogoError(true)
@@ -135,6 +134,8 @@ const IdeaRankerPage = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingCompetitors, setIsLoadingCompetitors] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
+
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const isDark = theme === 'dark'
 
@@ -207,120 +208,163 @@ const IdeaRankerPage = () => {
       setCompetitors(result.data)
     } catch (error) {
       console.error('Error fetching competitors:', error)
-      // Don't show error to user, just log it
+      // silent fail for competitors
     } finally {
       setIsLoadingCompetitors(false)
     }
   }
 
   useEffect(() => {
-    if (!rankerData || !canvasRef.current) return
+    if (!rankerData || !canvasRef.current) return;
 
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    
-    const width = canvas.width
-    const height = canvas.height
-    const centerX = width / 2
-    const centerY = height / 2
-    const radius = Math.min(width, height) / 2 - 40
+    const canvas = canvasRef.current;
 
-    ctx.clearRect(0, 0, width, height)
+    // ---- HiDPI canvas for crisp PDF export ----
+    const BASE = 520; // logical CSS size
+    const DPR = Math.max(1, Math.floor((typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1));
+    canvas.style.width = `${BASE}px`;
+    canvas.style.height = `${BASE}px`;
+    canvas.width = BASE * DPR;
+    canvas.height = BASE * DPR;
 
-    const labels = [
-      'Novelty',
-      'Local Capability',
-      'Feasibility',
-      'Sustainability',
-      'Global Demand',
-    ]
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.resetTransform();
+    ctx.scale(DPR, DPR);
+
+    const width = BASE;
+    const height = BASE;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(width, height) / 2 - 40;
+
+    // ---- High-contrast palette ----
+    const palette = isDark
+      ? {
+          grid: 'rgba(148,163,184,0.45)',      // slate-300 @ ~45%
+          axis: 'rgba(203,213,225,0.55)',      // slate-200 @ ~55%
+          label: '#F8FAFC',                    // slate-50
+          labelHalo: 'rgba(11,18,32,0.95)',    // bg-dark as halo
+          polyFill: 'rgba(59,130,246,0.30)',   // blue-500 @ 30%
+          polyStroke: '#60A5FA',               // blue-400
+          point: '#60A5FA',                    // blue-400
+          pointOutline: '#0B1220',             // very dark outline
+        }
+      : {
+          grid: 'rgba(71,85,105,0.40)',        // slate-600 @ 40%
+          axis: 'rgba(51,65,85,0.55)',         // slate-700 @ 55%
+          label: '#0F172A',                    // slate-900
+          labelHalo: 'rgba(255,255,255,0.98)', // white halo
+          polyFill: 'rgba(16,185,129,0.30)',   // emerald-500 @ 30%
+          polyStroke: '#059669',               // emerald-600
+          point: '#059669',                    // emerald-600
+          pointOutline: '#FFFFFF',             // white outline
+        };
+
+    // data
+    const labels = ['Novelty', 'Local Capability', 'Feasibility', 'Sustainability', 'Global Demand'];
     const data = [
       rankerData.scores.novelty.score,
       rankerData.scores.localCapability.score,
       rankerData.scores.feasibility.score,
       rankerData.scores.sustainability.score,
       rankerData.scores.globalDemand.score,
-    ]
-    const max = 100
+    ];
+    const max = 100;
 
-    // Draw grid circles
-    ctx.strokeStyle = isDark
-      ? 'rgba(71, 85, 105, 0.5)'
-      : 'rgba(203, 213, 225, 0.7)'
-    ctx.lineWidth = 1
+    ctx.clearRect(0, 0, width, height);
+
+    // ---- Grid circles ----
+    ctx.strokeStyle = palette.grid;
+    ctx.lineWidth = 1.5;
     for (let i = 1; i <= 5; i++) {
-      ctx.beginPath()
-      ctx.arc(centerX, centerY, (radius / 5) * i, 0, 2 * Math.PI)
-      ctx.stroke()
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, (radius / 5) * i, 0, 2 * Math.PI);
+      ctx.stroke();
     }
 
-    // Draw axis lines
-    const angleStep = (2 * Math.PI) / labels.length
-    labels.forEach((label, i) => {
-      const angle = i * angleStep - Math.PI / 2
-      const x = centerX + radius * Math.cos(angle)
-      const y = centerY + radius * Math.sin(angle)
+    // ---- Axis lines ----
+    const angleStep = (2 * Math.PI) / labels.length;
+    ctx.strokeStyle = palette.axis;
+    ctx.lineWidth = 1.25;
+    for (let i = 0; i < labels.length; i++) {
+      const angle = i * angleStep - Math.PI / 2;
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
 
-      ctx.beginPath()
-      ctx.moveTo(centerX, centerY)
-      ctx.lineTo(x, y)
-      ctx.stroke()
-    })
-
-    // Draw data polygon
-    ctx.beginPath()
+    // ---- Data polygon ----
+    ctx.beginPath();
     data.forEach((value, i) => {
-      const angle = i * angleStep - Math.PI / 2
-      const r = (value / max) * radius
-      const x = centerX + r * Math.cos(angle)
-      const y = centerY + r * Math.sin(angle)
+      const angle = i * angleStep - Math.PI / 2;
+      const r = (value / max) * radius;
+      const x = centerX + r * Math.cos(angle);
+      const y = centerY + r * Math.sin(angle);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = palette.polyFill;     // a bit more opaque
+    ctx.fill();
+    ctx.strokeStyle = palette.polyStroke; // slightly bolder stroke
+    ctx.lineWidth = 2.25;
+    ctx.stroke();
 
-      if (i === 0) {
-        ctx.moveTo(x, y)
-      } else {
-        ctx.lineTo(x, y)
-      }
-    })
-    ctx.closePath()
-    ctx.fillStyle = isDark
-      ? 'rgba(59, 130, 246, 0.2)'
-      : 'rgba(16, 185, 129, 0.2)'
-    ctx.fill()
-    ctx.strokeStyle = isDark ? '#3B82F6' : '#10B981'
-    ctx.lineWidth = 2
-    ctx.stroke()
-
-    // Draw data points
+    // ---- Data points ----
     data.forEach((value, i) => {
-      const angle = i * angleStep - Math.PI / 2
-      const r = (value / max) * radius
-      const x = centerX + r * Math.cos(angle)
-      const y = centerY + r * Math.sin(angle)
+      const angle = i * angleStep - Math.PI / 2;
+      const r = (value / max) * radius;
+      const x = centerX + r * Math.cos(angle);
+      const y = centerY + r * Math.sin(angle);
 
-      ctx.beginPath()
-      ctx.arc(x, y, 5, 0, 2 * Math.PI)
-      ctx.fillStyle = isDark ? '#3B82F6' : '#10B981'
-      ctx.fill()
-      ctx.strokeStyle = '#FFFFFF'
-      ctx.lineWidth = 2
-      ctx.stroke()
-    })
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, 2 * Math.PI);
+      ctx.fillStyle = palette.point;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = palette.pointOutline; // high-contrast outline for visibility
+      ctx.stroke();
+    });
 
-    // Draw labels
-    ctx.fillStyle = isDark ? 'rgba(248, 250, 252, 1)' : 'rgba(30, 41, 59, 1)'
-    ctx.font = 'bold 14px Inter, sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
+    // ---- Labels with halo (no clipping) ----
+    ctx.font = '600 15px Inter, system-ui, sans-serif';
+    const pad = 8;
+    for (let i = 0; i < labels.length; i++) {
+      const label = labels[i];
+      const angle = i * angleStep - Math.PI / 2;
+      const baseR = radius + 28;
+      let x = centerX + baseR * Math.cos(angle);
+      let y = centerY + baseR * Math.sin(angle);
 
-    labels.forEach((label, i) => {
-      const angle = i * angleStep - Math.PI / 2
-      const labelRadius = radius + 30
-      const x = centerX + labelRadius * Math.cos(angle)
-      const y = centerY + labelRadius * Math.sin(angle)
-      ctx.fillText(label, x, y)
-    })
-  }, [rankerData, theme, isDark])
+      const deg = ((angle * 180) / Math.PI + 360) % 360;
+      let align: CanvasTextAlign = 'center';
+      let baseline: CanvasTextBaseline = 'middle';
+      if (deg >= 30 && deg <= 150) { align = 'left';  x += pad; }
+      else if (deg >= 210 && deg <= 330) { align = 'right'; x -= pad; }
+      if (deg > 330 || deg < 30) baseline = 'bottom';
+      else if (deg > 150 && deg < 210) baseline = 'top';
+
+      const w = ctx.measureText(label).width;
+      if (align === 'center') x = Math.max(pad + w / 2, Math.min(width - pad - w / 2, x));
+      else if (align === 'left') x = Math.min(width - pad - w, x);
+      else x = Math.max(pad + w, x);
+      y = Math.max(pad + 8, Math.min(height - pad - 8, y));
+
+      // halo stroke behind text for contrast
+      ctx.textAlign = align;
+      ctx.textBaseline = baseline;
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = palette.labelHalo;
+      ctx.strokeText(label, x, y);
+
+      ctx.fillStyle = palette.label;
+      ctx.fillText(label, x, y);
+    }
+  }, [rankerData, theme, isDark]);
 
   const handleGeneratePitch = () => {
     if (typeof window !== 'undefined' && summary) {
@@ -331,6 +375,121 @@ const IdeaRankerPage = () => {
       }
     }
     window.location.href = '/pitch-generator'
+  }
+
+  const handleDownloadPDF = async () => {
+    if (!rankerData) return
+    setIsDownloading(true)
+    try {
+      const [{ jsPDF }, autoTableModule] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ])
+      const autoTable = autoTableModule.default as (doc: any, opts: any) => any
+
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+      const pageW = doc.internal.pageSize.getWidth()
+      const pageH = doc.internal.pageSize.getHeight()
+      const M = 40
+      let y = M
+
+      const primary: [number, number, number] = isDark ? [59, 130, 246] : [16, 185, 129]
+      const gray = (c: number) => [c, c, c] as [number, number, number]
+
+      // Header
+      doc.setFillColor(...primary)
+      doc.rect(0, 0, pageW, 48, 'F')
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(18)
+      doc.setTextColor(255, 255, 255)
+      doc.text('IdeaRanker Report', M, 30)
+      y = 48 + M
+
+      // Meta
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(12)
+      doc.setTextColor(...gray(40))
+      doc.text(`Idea: ${rankerData.ideaTitle}`, M, y); y += 18
+      doc.text(`Overall: ${rankerData.overallScore}/100 — ${rankerData.readinessLabel}`, M, y); y += 14
+      doc.text(`Generated: ${new Date().toLocaleString()}`, M, y); y += 20
+
+      // Radar as image
+      if (canvasRef.current) {
+        const dataUrl = canvasRef.current.toDataURL('image/png')
+        const w = pageW - M * 2
+        const h = (canvasRef.current.height * w) / canvasRef.current.width
+        doc.addImage(dataUrl, 'PNG', M, y, w, h)
+        y += h + 16
+      }
+
+      // Scores table
+      const rows = [
+        ['Novelty', `${rankerData.scores.novelty.score}`, rankerData.scores.novelty.justification],
+        ['Local Capability', `${rankerData.scores.localCapability.score}`, rankerData.scores.localCapability.justification],
+        ['Feasibility', `${rankerData.scores.feasibility.score}`, rankerData.scores.feasibility.justification],
+        ['Sustainability', `${rankerData.scores.sustainability.score}`, rankerData.scores.sustainability.justification],
+        ['Global Demand', `${rankerData.scores.globalDemand.score}`, rankerData.scores.globalDemand.justification],
+      ]
+      autoTable(doc, {
+        startY: y,
+        head: [['Metric', 'Score', 'Justification']],
+        body: rows,
+        styles: { font: 'helvetica', fontSize: 10, cellPadding: 6 },
+        headStyles: { fillColor: primary, textColor: 255 },
+        margin: { left: M, right: M },
+      })
+
+      // Next steps
+      y = (doc as any).lastAutoTable?.finalY ?? y
+      if (rankerData.nextSteps?.length) {
+        y += 20
+        if (y > pageH - 80) { doc.addPage(); y = M }
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(...gray(25))
+        doc.text('Next Steps', M, y); y += 12
+        doc.setDrawColor(...gray(210)); doc.line(M, y, pageW - M, y); y += 14
+
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(...gray(55))
+        rankerData.nextSteps.forEach((s, i) => {
+          const lines = doc.splitTextToSize(`${i + 1}. ${s.text}`, pageW - M * 2)
+          lines.forEach((ln: string) => {
+            if (y > pageH - 60) { doc.addPage(); y = M }
+            doc.text(ln, M, y); y += 14
+          })
+          y += 2
+        })
+      }
+
+      // Footer page numbers
+      const pages = doc.getNumberOfPages()
+      for (let i = 1; i <= pages; i++) {
+        doc.setPage(i)
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...gray(120))
+        doc.text(`Page ${i} of ${pages}`, pageW - M, doc.internal.pageSize.getHeight() - 16, { align: 'right' })
+      }
+
+      doc.save('idearanker-report.pdf')
+    } catch (e) {
+      console.error(e)
+      alert('Download failed. Ensure jspdf & jspdf-autotable are installed.')
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  const handleShare = async () => {
+    try {
+      const title = `IdeaRanker: ${rankerData?.ideaTitle ?? 'Your Idea'}`
+      const text = `Overall ${rankerData?.overallScore ?? 0}/100 — ${rankerData?.readinessLabel ?? ''}`
+      const url = typeof window !== 'undefined' ? window.location.href : ''
+      if (navigator.share) {
+        await navigator.share({ title, text, url })
+      } else {
+        await navigator.clipboard.writeText(`${title}\n${text}\n${url}`)
+        alert('Share link copied to clipboard.')
+      }
+    } catch {
+      // user cancelled or clipboard error — no-op
+    }
   }
 
   if (isLoading) {
@@ -635,26 +794,34 @@ const IdeaRankerPage = () => {
                 ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white'
                 : 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white'
             }`}
+            aria-label='Generate full pitch deck'
           >
             <Sparkles className='w-5 h-5' />
             Generate Full Pitch
           </button>
+
           <button
+            onClick={handleDownloadPDF}
+            disabled={isDownloading}
             className={`w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold transition-all ${
               isDark
                 ? 'bg-gray-800 hover:bg-gray-700 text-white'
                 : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-            }`}
+            } disabled:opacity-60`}
+            aria-label='Download IdeaRanker report as PDF'
           >
-            <Download className='w-5 h-5' />
-            Download PDF
+            {isDownloading ? <Loader2 className='w-5 h-5 animate-spin' /> : <Download className='w-5 h-5' />}
+            {isDownloading ? 'Preparing…' : 'Download PDF'}
           </button>
+
           <button
+            onClick={handleShare}
             className={`w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold transition-all ${
               isDark
                 ? 'bg-gray-800 hover:bg-gray-700 text-white'
                 : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
             }`}
+            aria-label='Share this analysis'
           >
             <Share className='w-5 h-5' />
             Share
