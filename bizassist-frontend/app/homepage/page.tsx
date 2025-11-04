@@ -34,7 +34,7 @@ const Homepage = () => {
         theme={theme}
         onThemeChange={(newTheme) => setTheme(newTheme)}
         showHomeLink={false}
-        showMyPitchesLink={false}
+        showMyPitchesLink={true}
         showLogout={true}
         />
 

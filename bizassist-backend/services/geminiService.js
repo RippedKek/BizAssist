@@ -103,7 +103,7 @@ class GeminiService {
 
     Business Summary: ${summary}
 
-    Respond with a single JSON object that strictly matches the following TypeScript interface. Use concise, insight-driven copy. Percentages must be numbers between 0 and 100. Monetary values should include currency symbols. Provide 3 items for stats, 4-5 items for topMarkets, 3 items for globalHighlights, 3 challenges, and 3 recommendations.
+    Respond with a single JSON object that strictly matches the following TypeScript interface. Use concise, insight-driven copy. Percentages must be numbers between 0 and 100. Monetary values should include currency symbols. Provide 3 items for stats, 4-5 items for topMarkets, 3 items for globalHighlights, 3 challenges, and 3 recommendations. For region, determine if the business is primarily focused on Bangladesh (use "bangladesh") or global (use "global"). For companies, provide 3-5 relevant company names with their approximate latitude and longitude coordinates, and type as either 'company' or 'office'.
 
     interface MarketInsights {
       headline: string
@@ -136,21 +136,47 @@ class GeminiService {
       recommendations: Array<{
         text: string
       }>
+      region: string
+      companies: Array<{
+        name: string
+        lat: number
+        lng: number
+        type: 'company' | 'office'
+      }>
     }
 
     Return ONLY valid JSON, without any backticks, code fences, or commentary.`
 
-    const result = await this.model.generateContent(prompt)
-    const response = await result.response
-    const rawText = response.text().trim()
-    const cleanedText = rawText.replace(/```json\n?|```/gi, '').trim()
+    const maxRetries = 3
+    let lastError
 
-    try {
-      return JSON.parse(cleanedText)
-    } catch (error) {
-      console.error('Failed to parse market insights JSON:', cleanedText)
-      throw new Error('Invalid JSON returned from Gemini')
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await this.model.generateContent(prompt)
+        const response = await result.response
+        const rawText = response.text().trim()
+        const cleanedText = rawText.replace(/```json\n?|```/gi, '').trim()
+
+        try {
+          return JSON.parse(cleanedText)
+        } catch (parseError) {
+          console.error('Failed to parse market insights JSON:', cleanedText)
+          throw new Error('Invalid JSON returned from Gemini')
+        }
+      } catch (error) {
+        lastError = error
+        if (error.status === 503 && attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000 // Exponential backoff: 2s, 4s, 8s
+          console.log(`Gemini API overloaded (attempt ${attempt}/${maxRetries}). Retrying in ${delay}ms...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+        } else {
+          break // Not a 503 error or max retries reached
+        }
+      }
     }
+
+    console.error('Error generating market insights after retries:', lastError)
+    throw lastError
   }
 
   async generateCompetitors(summary) {
