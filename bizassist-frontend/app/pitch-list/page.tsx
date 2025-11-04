@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Plus, Search, Filter, ArrowUpDown, MoreHorizontal } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import InputIdeaModal from '../../components/InputIdeaModal';
+import Link from 'next/link';
 
 const MyPitchesPage = () => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -149,7 +150,9 @@ const MyPitchesPage = () => {
                     }`}
                   >
                     <td className={`px-6 py-4 font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {pitch.title}
+                      <Link href="/pitch-dashboard" className="hover:underline">
+                        {pitch.title}
+                      </Link>
                     </td>
                     <td className={`px-6 py-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                       {pitch.lastUpdated}
