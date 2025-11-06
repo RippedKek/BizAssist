@@ -65,6 +65,7 @@ const SignUpPage = () => {
       // Add user data to Firestore
       await setDoc(doc(db, 'users', email), {
         name: name,
+        account: 'basic',
       })
 
       // Update Redux store
