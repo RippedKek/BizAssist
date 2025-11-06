@@ -5,6 +5,7 @@ const errorHandler = require('./middleware/errorHandler')
 const ideaRoutes = require('./routes/ideaRoutes')
 const healthRoutes = require('./routes/healthRoutes')
 const pitchPracticeRoutes = require('./routes/pitchPracticeRoutes')
+const chatbotRoutes = require('./routes/chatbotRoutes')
 
 const app = express()
 const PORT = process.env.PORT || 8000
@@ -17,6 +18,7 @@ app.use(corsMiddleware)
 app.use('/api/v1', ideaRoutes)
 app.use('/api/v1', healthRoutes)
 app.use('/api/v1/pitch-practice', pitchPracticeRoutes)
+app.use('/api/v1/chatbot', chatbotRoutes)
 
 // Error handling
 app.use(errorHandler)
