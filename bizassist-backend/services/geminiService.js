@@ -393,6 +393,143 @@ class GeminiService {
 
     return cleanedCode
   }
+
+  async generateChatbotResponse(message, marketInsights, conversationHistory) {
+    // Use chatbot-specific API key
+    const chatbotGenAI = new GoogleGenerativeAI(process.env.GEMINI__API_KEY_CHATBOT)
+    const chatbotModel = chatbotGenAI.getGenerativeModel({
+      model: 'gemini-2.5-flash-lite',
+    })
+    // Build conversation context
+    let contextText = ''
+    
+    if (marketInsights) {
+      contextText = `
+You are an expert market analyst assistant helping a user understand their market research data. Here is the market analysis context:
+
+**Headline:** ${marketInsights.headline || 'N/A'}
+
+**Feasibility Score:** ${marketInsights.feasibilityScore?.value || 0}/100 - ${marketInsights.feasibilityScore?.label || 'N/A'}
+**Justification:** ${marketInsights.feasibilityScore?.justification || 'N/A'}
+
+**Key Statistics:**
+${(marketInsights.stats || []).map(stat => `- ${stat.label}: ${stat.value} - ${stat.detail}`).join('\n')}
+
+**Top Markets:**
+${(marketInsights.topMarkets || []).map(market => `- ${market.name}: ${market.percentage}% - ${market.rationale}`).join('\n')}
+
+**Global Highlights:**
+${(marketInsights.globalHighlights || []).map(h => `- ${h.region}: ${h.signal} (${h.percentage}%) - ${h.detail}`).join('\n')}
+
+**Challenges:**
+${(marketInsights.challenges || []).map(c => `- ${c.label} (${c.percentage}%): ${c.detail}`).join('\n')}
+
+**Recommendations:**
+${(marketInsights.recommendations || []).map((r, i) => `${i + 1}. ${r.text}`).join('\n')}
+
+**Companies/Competitors:**
+${(marketInsights.companies || []).map(c => `- ${c.name} (${c.type})`).join('\n')}
+`
+    }
+
+    // Build conversation history
+    let historyText = ''
+    if (conversationHistory && conversationHistory.length > 0) {
+      historyText = '\n\nPrevious conversation:\n'
+      conversationHistory.forEach(msg => {
+        historyText += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`
+      })
+    }
+
+    const prompt = `${contextText}
+
+${historyText}
+
+User's question: ${message}
+
+Provide a helpful, concise, and professional response based on the market analysis data provided. If the user asks about specific metrics or data points, reference them accurately. If the user asks something not covered in the data, politely indicate that and offer to answer questions about the available market analysis. Keep your response conversational and friendly but professional.
+
+Your response:`
+
+    const result = await chatbotModel.generateContent(prompt)
+    const response = await result.response
+    return response.text()
+  }
+
+  async generateIdeaRankerChatbotResponse(message, rankerData, competitors, conversationHistory) {
+    // Use chatbot-specific API key
+    const chatbotGenAI = new GoogleGenerativeAI(process.env.GEMINI__API_KEY_CHATBOT)
+    const chatbotModel = chatbotGenAI.getGenerativeModel({
+      model: 'gemini-2.5-flash-lite',
+    })
+    
+    // Build conversation context
+    let contextText = ''
+    
+    if (rankerData) {
+      const scores = rankerData.scores || {}
+      contextText = `
+You are an expert business analyst assistant helping a user understand their idea ranking and evaluation data. Here is the idea ranker analysis context:
+
+**Business Idea:** ${rankerData.ideaTitle || 'N/A'}
+
+**Overall Score:** ${rankerData.overallScore || 0}/100
+**Readiness Label:** ${rankerData.readinessLabel || 'N/A'}
+
+**Detailed Scores:**
+
+1. **Novelty Score:** ${scores.novelty?.score || 0}/100
+   - Justification: ${scores.novelty?.justification || 'N/A'}
+
+2. **Local Capability Score:** ${scores.localCapability?.score || 0}/100
+   - Justification: ${scores.localCapability?.justification || 'N/A'}
+
+3. **Feasibility Score:** ${scores.feasibility?.score || 0}/100
+   - Justification: ${scores.feasibility?.justification || 'N/A'}
+
+4. **Sustainability Score:** ${scores.sustainability?.score || 0}/100
+   - Justification: ${scores.sustainability?.justification || 'N/A'}
+
+5. **Global Demand Score:** ${scores.globalDemand?.score || 0}/100
+   - Justification: ${scores.globalDemand?.justification || 'N/A'}
+
+**Next Steps:**
+${(rankerData.nextSteps || []).map((step, i) => `${i + 1}. ${step.text}`).join('\n')}
+`
+    }
+
+    if (competitors && competitors.competitors) {
+      contextText += `
+
+**Competitor Analysis:**
+${competitors.competitors.map((comp, i) => `${i + 1}. ${comp.title} (${comp.website})
+   - ${comp.description}`).join('\n')}
+`
+    }
+
+    // Build conversation history
+    let historyText = ''
+    if (conversationHistory && conversationHistory.length > 0) {
+      historyText = '\n\nPrevious conversation:\n'
+      conversationHistory.forEach(msg => {
+        historyText += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`
+      })
+    }
+
+    const prompt = `${contextText}
+
+${historyText}
+
+User's question: ${message}
+
+Provide a helpful, concise, and professional response based on the idea ranker evaluation data provided. If the user asks about specific scores or metrics, reference them accurately. If the user asks about competitors, provide relevant information from the competitor analysis. If the user asks how to improve their scores, refer to the justifications and next steps. If the user asks something not covered in the data, politely indicate that and offer to answer questions about the available idea ranker evaluation. Keep your response conversational and friendly but professional.
+
+Your response:`
+
+    const result = await chatbotModel.generateContent(prompt)
+    const response = await result.response
+    return response.text()
+  }
 }
 
 module.exports = new GeminiService()
