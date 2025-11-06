@@ -352,12 +352,18 @@ const PitchDetailsPage = () => {
                   </div>
                 </div>
 
-                <div className='w-full lg:w-96 h-64 rounded-2xl overflow-hidden shadow-2xl border border-white/10'>
-                  <img
-                    src='https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=800'
-                    alt='Business concept'
-                    className='w-full h-full object-cover'
-                  />
+                <div className='w-full lg:w-96 h-64 rounded-2xl overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600'>
+                  {pitch?.visualBranding?.logo?.image ? (
+                    <img
+                      src={pitch.visualBranding.logo.image}
+                      alt={pitch.businessTitle || 'Business logo'}
+                      className='w-full h-full object-contain p-4'
+                    />
+                  ) : (
+                    <div className='flex items-center justify-center w-full h-full'>
+                      <Sparkles className='w-16 h-16 text-white/50' />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

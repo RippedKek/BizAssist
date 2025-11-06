@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Sparkles, Loader2 } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
 import { upsertStep } from '../firebase/pitches'
+import { uploadImageToCloudinary } from '../utils/cloudinary'
 
 interface Logo {
   id: number
@@ -183,7 +184,7 @@ const VisualBrandingScreen = () => {
 
       const logoImages = await Promise.all(logoPromises)
 
-      // Combine base logos with generated images
+      // Combine base logos with generated images (keep original URLs, upload only on save)
       const logosWithImages: Logo[] = baseLogos.map((logo, index) => ({
         ...logo,
         image: logoImages[index] || undefined,
@@ -319,6 +320,7 @@ const VisualBrandingScreen = () => {
         },
       ]
 
+      // Combine base logos with generated images (keep original URLs, upload only on save)
       const logosWithImages: Logo[] = baseLogos.map((logo, index) => ({
         ...logo,
         image: logoImages[index] || undefined,
@@ -466,10 +468,42 @@ const VisualBrandingScreen = () => {
               onClick={async () => {
                 // Store selected branding in sessionStorage
                 try {
+                  const selectedLogoData = logos[selectedLogo]
+
+                  // Upload the selected logo to Cloudinary before saving
+                  let logoImageUrl = selectedLogoData?.image
+                  if (
+                    logoImageUrl &&
+                    !logoImageUrl.includes('cloudinary.com')
+                  ) {
+                    try {
+                      // Show loading state
+                      setIsLoading(true)
+                      logoImageUrl = await uploadImageToCloudinary(
+                        logoImageUrl,
+                        `bizassist/logos/${
+                          businessName.replace(/\s+/g, '-').toLowerCase() ||
+                          'default'
+                        }`
+                      )
+                    } catch (error) {
+                      console.error(
+                        'Error uploading selected logo to Cloudinary:',
+                        error
+                      )
+                      // Continue with original URL if upload fails
+                    } finally {
+                      setIsLoading(false)
+                    }
+                  }
+
                   const brandingData = {
                     selectedLogo: selectedLogo,
                     selectedPalette: selectedPalette,
-                    logo: logos[selectedLogo],
+                    logo: {
+                      ...selectedLogoData,
+                      image: logoImageUrl,
+                    },
                     palette: currentPalette,
                   }
                   sessionStorage.setItem(
