@@ -228,7 +228,7 @@ const PitchDetailsPage = () => {
   const shortSummary = pitch?.summary || pitch?.draftIdea?.aiSummary || ''
 
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
+    <div className={`min-h-screen ${isDark ? 'bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white' : 'bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900'}`}>
       <Navbar
         theme={theme}
         onThemeChange={(newTheme: string) =>
