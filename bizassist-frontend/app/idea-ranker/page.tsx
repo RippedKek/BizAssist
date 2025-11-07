@@ -184,6 +184,25 @@ const IdeaRankerPage = () => {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
+      // First check if there's existing idea ranking data
+      const storedRankingData = sessionStorage.getItem('bizassist-idea-ranking');
+      if (storedRankingData) {
+        try {
+          const rankingData = JSON.parse(storedRankingData);
+          if (rankingData.rankerData) {
+            setRankerData(rankingData.rankerData);
+            setSummary(rankingData.summary || '');
+            setCompetitors(rankingData.competitors || null);
+            setIsLoading(false);
+            setIsLoadingCompetitors(false);
+            return; // Don't fetch new data if we have existing analysis
+          }
+        } catch (e) {
+          console.error('Error parsing existing idea ranking data:', e);
+        }
+      }
+
+      // If no existing data, load basic data and fetch new
       const storedSummary = sessionStorage.getItem("bizassist-shared-summary");
       if (storedSummary) {
         setSummary(storedSummary);
@@ -192,11 +211,13 @@ const IdeaRankerPage = () => {
       } else {
         setError("No business summary found. Please go back and create one.");
         setIsLoading(false);
+        setIsLoadingCompetitors(false);
       }
     } catch (error) {
       console.error("Error retrieving summary:", error);
       setError("Failed to load business summary.");
       setIsLoading(false);
+      setIsLoadingCompetitors(false);
     }
   }, []);
 

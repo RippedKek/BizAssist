@@ -26,6 +26,13 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useAppSelector } from '../redux/hooks'
 import { getPitchById, deletePitchById } from '../firebase/pitches'
 import { removePitchIdFromUser } from '../firebase/users'
+import {
+  exportAllPitchAssets,            // ✅ existing
+  exportMarketReport,              // ✅ new
+  exportIdeaRankerReport,          // ✅ new
+  exportPitchReport,               // ✅ new
+  exportBrandingAssets,            // ✅ new
+} from '../utils/downloads'
 
 /** Helpers for PDF building (shared by all download handlers) */
 async function getPdfBits() {
@@ -85,68 +92,43 @@ const PitchDetailsPage = () => {
     run()
   }, [searchParams])
 
+  // ✅ Export all (zip)
   const handleDownloadAll = async () => {
     if (busy) return
+    if (!pitch) return
     setBusy('all')
     try {
-      const { jsPDF, autoTable } = await getPdfBits()
-      const doc = new jsPDF({ unit: 'pt', format: 'a4' })
-      const pageW = doc.internal.pageSize.getWidth()
-      const pageH = doc.internal.pageSize.getHeight()
-      const primary: [number, number, number] = isDark
-        ? [37, 99, 235]
-        : [16, 185, 129]
-
-      // Header
-      doc.setFillColor(...primary)
-      doc.rect(0, 0, pageW, 48, 'F')
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(18)
-      doc.setTextColor(255, 255, 255)
-      doc.text('Overall Pitch Report', 40, 30)
-      doc.setFontSize(10)
-      doc.text(`Generated: ${nowStr()}`, pageW - 40, 30, { align: 'right' })
-
-      let y = 48 + 40
-
-      // Content sections
-      const addSection = (title: string, content: string) => {
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(14)
-        doc.setTextColor(35, 35, 35)
-        doc.text(title, 40, y)
-        y += 12
-        doc.setDrawColor(210, 210, 210)
-        doc.line(40, y, pageW - 40, y)
-        y += 16
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(11)
-        doc.setTextColor(70, 70, 70)
-        const lines = doc.splitTextToSize(content, pageW - 80)
-        lines.forEach((ln: string) => {
-          doc.text(ln, 40, y)
-          y += 14
-        })
-        y += 8
-      }
-
-      addSection(
-        'Pitch Overview',
-        'Core business idea: Sustainable textile manufacturing using eco-friendly jute fibers. Target Audience: Socially conscious fashion brands in Europe.'
-      )
-      addSection(
-        'Market Analysis',
-        'Summary: Market size growing with EU sustainable mandates; target customers include boutique eco brands and private-label lines.'
-      )
-
-      doc.save('overall-pitch-report.pdf')
+      await exportAllPitchAssets({
+        pitch,
+        theme: isDark ? 'dark' : 'light',
+      })
     } catch (e) {
       console.error(e)
-      alert(
-        'Failed to generate overall report. Make sure jspdf & jspdf-autotable are installed.'
-      )
+      alert('Failed to export assets.')
     } finally {
       setBusy(null)
+    }
+  }
+
+  // ✅ NEW: per-tile export, using the same pitch data
+  const handleExportSection = async (sectionId: string) => {
+    if (!pitch) return
+    switch (sectionId) {
+      case 'market':
+        await exportMarketReport(pitch, isDark ? 'dark' : 'light')
+        break
+      case 'ranker':
+        await exportIdeaRankerReport(pitch, isDark ? 'dark' : 'light')
+        break
+      case 'pitch':
+        await exportPitchReport(pitch, isDark ? 'dark' : 'light')
+        break
+      case 'branding':
+        await exportBrandingAssets(pitch)
+        break
+      // slides left as-is for now
+      default:
+        break
     }
   }
 
@@ -227,8 +209,75 @@ const PitchDetailsPage = () => {
   const title = pitch?.businessTitle || 'Untitled Pitch'
   const shortSummary = pitch?.summary || pitch?.draftIdea?.aiSummary || ''
 
+  const handleNavigate = (sectionId: string) => {
+    if (!pitch) return
+
+    // Set common sessionStorage items
+    if (pitch.summary) {
+      sessionStorage.setItem('bizassist-shared-summary', pitch.summary)
+    }
+    if (pitch.businessTitle) {
+      sessionStorage.setItem('bizassist-business-title', pitch.businessTitle)
+    }
+    if (pitch.id) {
+      sessionStorage.setItem('bizassist-pitch-id', pitch.id)
+    }
+
+    switch (sectionId) {
+      case 'market':
+        router.push('/market-dashboard')
+        break
+      case 'ranker':
+        router.push('/idea-ranker')
+        break
+      case 'pitch':
+        if (pitch.pitchGeneration?.pitchSpeech) {
+          sessionStorage.setItem(
+            'bizassist-pitch-data',
+            JSON.stringify({
+              pitchSpeech: pitch.pitchGeneration.pitchSpeech,
+              businessTitle: pitch.businessTitle,
+              summary: pitch.summary,
+            })
+          )
+        }
+        router.push('/pitch-generator')
+        break
+      case 'branding':
+        if (pitch.visualBranding) {
+          sessionStorage.setItem(
+            'bizassist-branding',
+            JSON.stringify(pitch.visualBranding)
+          )
+        }
+        router.push('/visual-branding')
+        break
+      case 'slides':
+        if (pitch.pitchGeneration?.pitchSpeech) {
+          sessionStorage.setItem(
+            'bizassist-pitch-data',
+            JSON.stringify({
+              pitchSpeech: pitch.pitchGeneration.pitchSpeech,
+              businessTitle: pitch.businessTitle,
+              summary: pitch.summary,
+            })
+          )
+        }
+        router.push('/slide-generator')
+        break
+      default:
+        break
+    }
+  }
+
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
+    <div
+      className={`min-h-screen ${
+        isDark
+          ? 'bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white'
+          : 'bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900'
+      }`}
+    >
       <Navbar
         theme={theme}
         onThemeChange={(newTheme: string) =>
@@ -438,6 +487,8 @@ const PitchDetailsPage = () => {
                         className={`p-2 rounded-lg transition-all ${
                           isDark ? 'hover:bg-gray-900/50' : 'hover:bg-white/70'
                         }`}
+                        onClick={() => handleNavigate(section.id)}
+                        title={`Navigate to ${section.title}`}
                       >
                         <ArrowUpRight className='w-5 h-5' />
                       </button>
@@ -479,6 +530,7 @@ const PitchDetailsPage = () => {
                             ? 'bg-gray-900/50 hover:bg-gray-900 text-white backdrop-blur-sm'
                             : 'bg-white/70 hover:bg-white text-gray-900 backdrop-blur-sm'
                         }`}
+                        onClick={() => handleExportSection(section.id)} // ✅ hooked
                       >
                         <Download className='w-4 h-4' />
                         Export

@@ -122,6 +122,23 @@ const PitchGeneratorPage = () => {
     if (typeof window === 'undefined') return
 
     try {
+      // First check if there's existing pitch data
+      const storedPitchData = sessionStorage.getItem('bizassist-pitch-data')
+      if (storedPitchData) {
+        try {
+          const pitchData = JSON.parse(storedPitchData)
+          if (pitchData.pitchSpeech) {
+            setPitchSpeech(pitchData.pitchSpeech)
+            setBusinessTitle(pitchData.businessTitle || '')
+            setSummary(pitchData.summary || '')
+            return // Don't show modal or fetch names if we have existing data
+          }
+        } catch (e) {
+          console.error('Error parsing existing pitch data:', e)
+        }
+      }
+
+      // If no existing pitch data, check for summary to start fresh
       const storedSummary = sessionStorage.getItem('bizassist-shared-summary')
       if (storedSummary) {
         setSummary(storedSummary)
@@ -130,7 +147,7 @@ const PitchGeneratorPage = () => {
         fetchBusinessNames(storedSummary)
       }
     } catch (error) {
-      console.error('Error retrieving summary:', error)
+      console.error('Error retrieving data:', error)
     }
   }, [])
 
