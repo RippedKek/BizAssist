@@ -179,8 +179,27 @@ const MarketDashboardPage = () => {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
+      // First check if there's existing market analysis data
+      const storedMarketAnalysis = sessionStorage.getItem('bizassist-market-analysis');
+      if (storedMarketAnalysis) {
+        try {
+          const marketData = JSON.parse(storedMarketAnalysis);
+          if (marketData.insights) {
+            setInsights(marketData.insights);
+            setSummary(marketData.summary || '');
+            setIsLoading(false);
+            return; // Don't fetch new data if we have existing analysis
+          }
+        } catch (e) {
+          console.error('Error parsing existing market analysis data:', e);
+        }
+      }
+
+      // If no existing data, load basic data and fetch new
       const storedSummary = sessionStorage.getItem("bizassist-shared-summary");
-      if (storedSummary) setSummary(storedSummary);
+      if (storedSummary) {
+        setSummary(storedSummary);
+      }
     } catch (e) {
       console.error("Error retrieving summary:", e);
     }
@@ -188,8 +207,11 @@ const MarketDashboardPage = () => {
 
   useEffect(() => {
     if (!summary) return;
-    fetchInsights();
-  }, [summary, timeframe, region]);
+    // Only fetch if we don't already have insights
+    if (!insights) {
+      fetchInsights();
+    }
+  }, [summary, timeframe, region, insights]);
 
   const fetchInsights = async () => {
     setIsLoading(true);

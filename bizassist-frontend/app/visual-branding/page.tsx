@@ -39,6 +39,27 @@ const VisualBrandingScreen = () => {
     // Load data from sessionStorage
     if (typeof window !== 'undefined') {
       try {
+        // First check if there's existing branding data
+        const storedBranding = sessionStorage.getItem('bizassist-branding')
+        if (storedBranding) {
+          try {
+            const brandingData = JSON.parse(storedBranding)
+            if (brandingData.logo && brandingData.palette) {
+              setLogos([brandingData.logo]) // Set as array with single logo
+              setPalettes([brandingData.palette]) // Set as array with single palette
+              setSelectedLogo(0)
+              setSelectedPalette(0)
+              setBusinessName(brandingData.businessTitle || '')
+              setSummary(brandingData.summary || '')
+              setIsLoading(false)
+              return // Don't generate new branding if we have existing data
+            }
+          } catch (e) {
+            console.error('Error parsing existing branding data:', e)
+          }
+        }
+
+        // If no existing branding data, load basic data and generate new
         const storedSummary = sessionStorage.getItem('bizassist-shared-summary')
         const storedBusinessTitle = sessionStorage.getItem(
           'bizassist-business-title'

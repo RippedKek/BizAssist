@@ -227,6 +227,67 @@ const PitchDetailsPage = () => {
   const title = pitch?.businessTitle || 'Untitled Pitch'
   const shortSummary = pitch?.summary || pitch?.draftIdea?.aiSummary || ''
 
+  const handleNavigate = (sectionId: string) => {
+    if (!pitch) return
+
+    // Set common sessionStorage items
+    if (pitch.summary) {
+      sessionStorage.setItem('bizassist-shared-summary', pitch.summary)
+    }
+    if (pitch.businessTitle) {
+      sessionStorage.setItem('bizassist-business-title', pitch.businessTitle)
+    }
+    if (pitch.id) {
+      sessionStorage.setItem('bizassist-pitch-id', pitch.id)
+    }
+
+    switch (sectionId) {
+      case 'market':
+        router.push('/market-dashboard')
+        break
+      case 'ranker':
+        router.push('/idea-ranker')
+        break
+      case 'pitch':
+        if (pitch.pitchGeneration?.pitchSpeech) {
+          sessionStorage.setItem(
+            'bizassist-pitch-data',
+            JSON.stringify({
+              pitchSpeech: pitch.pitchGeneration.pitchSpeech,
+              businessTitle: pitch.businessTitle,
+              summary: pitch.summary,
+            })
+          )
+        }
+        router.push('/pitch-generator')
+        break
+      case 'branding':
+        if (pitch.visualBranding) {
+          sessionStorage.setItem(
+            'bizassist-branding',
+            JSON.stringify(pitch.visualBranding)
+          )
+        }
+        router.push('/visual-branding')
+        break
+      case 'slides':
+        if (pitch.pitchGeneration?.pitchSpeech) {
+          sessionStorage.setItem(
+            'bizassist-pitch-data',
+            JSON.stringify({
+              pitchSpeech: pitch.pitchGeneration.pitchSpeech,
+              businessTitle: pitch.businessTitle,
+              summary: pitch.summary,
+            })
+          )
+        }
+        router.push('/slide-generator')
+        break
+      default:
+        break
+    }
+  }
+
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white' : 'bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900'}`}>
       <Navbar
@@ -438,6 +499,8 @@ const PitchDetailsPage = () => {
                         className={`p-2 rounded-lg transition-all ${
                           isDark ? 'hover:bg-gray-900/50' : 'hover:bg-white/70'
                         }`}
+                        onClick={() => handleNavigate(section.id)}
+                        title={`Navigate to ${section.title}`}
                       >
                         <ArrowUpRight className='w-5 h-5' />
                       </button>
